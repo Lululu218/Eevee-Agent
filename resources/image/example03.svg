@@ -1,0 +1,49 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="800" height="200" rx="16" fill="#161a23"/>
+  
+  <!-- 左侧星星（带表情+呼吸动画） -->
+  <g transform="translate(60, 100)">
+    <animateTransform attributeName="transform" type="scale" values="1;1.1;1" dur="2s" repeatCount="indefinite" additive="sum"/>
+    <polygon points="0,-40 12,-12 40,-12 18,6 26,36 0,20 -26,36 -18,6 -40,-12 -12,-12" fill="#ffd700">
+      <animate attributeName="filter" values="drop-shadow(0 0 10px #ffd700);drop-shadow(0 0 20px #ffd700);drop-shadow(0 0 10px #ffd700)" dur="2s" repeatCount="indefinite"/>
+    </polygon>
+    <!-- 眼睛和微笑 -->
+    <circle cx="-10" cy="-5" r="3" fill="#000"/>
+    <circle cx="10" cy="-5" r="3" fill="#000"/>
+    <path d="M -10 8 Q 0 15 10 8" stroke="#000" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- 文字：第一行 -->
+  <text x="180" y="80" font-family="system-ui, sans-serif" font-size="20" fill="#a0aec0">觉得有帮助的话</text>
+  <!-- 文字：第二行，带发光效果 -->
+  <text x="180" y="130" font-family="system-ui, sans-serif" font-size="32" font-weight="bold" fill="#ffd700" filter="url(#glow)">
+    顺手点个 Star 支持一下呗~
+  </text>
+
+  <!-- 装饰星星1 -->
+  <g transform="translate(650, 40)">
+    <polygon points="0,-8 2,-2 8,-2 4,1 6,6 0,4 -6,6 -4,1 -8,-2 -2,-2" fill="#ffd700">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+      <animateTransform attributeName="transform" type="scale" values="0.8;1.2;0.8" dur="2s" repeatCount="indefinite" additive="sum"/>
+    </polygon>
+  </g>
+  <!-- 装饰星星2 -->
+  <g transform="translate(550, 120)">
+    <polygon points="0,-6 1.5,-1.5 6,-1.5 3,0.75 4.5,4.5 0,3 -4.5,4.5 -3,0.75 -6,-1.5 -1.5,-1.5" fill="#ffd700">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+      <animateTransform attributeName="transform" type="scale" values="0.8;1.2;0.8" dur="1.5s" repeatCount="indefinite" begin="0.5s" additive="sum"/>
+    </polygon>
+  </g>
+
+  <!-- 发光滤镜 -->
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

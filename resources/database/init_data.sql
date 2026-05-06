@@ -1,0 +1,1 @@
+INSERT INTO `user` VALUES (1, 'admin', '$2a$10$TenzIQyadG5i2wqa96IDFegtYfPu/hyIe3ESOyul.9nqMh6DEIYCO', 'https://weavatar.com/avatar/90311c51d1a5d8911b6734751a343132b82724b43fdb1eb8743e63dc6ddd93be', 'admin', '99991111@qq.com', NULL, 1, '2026-03-27 12:04:57', '2026-03-27 18:00:55');
