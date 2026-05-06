@@ -31,7 +31,7 @@ EeveeAgent 是一个企业级 Agentic RAG 平台，从前端搭建，到Java实�
 
 
 
-![](./../../images/example03.svg)
+![](resources/image/example03.svg)
 
 
 
@@ -45,7 +45,7 @@ EeveeAgent 是一个企业级 Agentic RAG 平台，从前端搭建，到Java实�
 
 
 
-![](./../../images/example04-1778060581319-6.png)
+![](resources/image/example04-1778060581319-6.png)
 
 ## 控制台展示
 
@@ -65,7 +65,7 @@ EeveeAgent 提供完整的可视化控制台，覆盖**普通用户与管理员�
 - 支持示例问题快速填充
 - 支持深度思考模式
 
-![](./../../images/example05.png)
+![](resources/image/example05.png)
 
 用户提交问题后，模型会实时生成回答结果，并提供良好的阅读体验：
 
@@ -74,7 +74,7 @@ EeveeAgent 提供完整的可视化控制台，覆盖**普通用户与管理员�
 - 支持代码高亮显示
 - 支持回答评价（点赞 / 点踩）
 
-![](./../../images/example06.png)
+![](resources/image/example06.png)
 
 
 
@@ -85,8 +85,8 @@ EeveeAgent 提供功能完善的管理后台，用于系统配置与运行管理
 
 
 <details>   <summary>管理后台截图（点击展开）</summary>    
-    <img src="./../../images/example07.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="./../../images/example08.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="./../../images/example09.png"alt="截图1" style="width:100%;margin:5px 0;"><img src="./../../images/example10.png"alt="截图1" style="width:100%;margin:5px 0;">
-    <img src="./../../images/example11.png"alt="截图1" style="width:100%;margin:5px 0;">
+    <img src="resources/image/example07.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example08.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example09.png"alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example10.png"alt="截图1" style="width:100%;margin:5px 0;">
+    <img src="resources/image/example11.png"alt="截图1" style="width:100%;margin:5px 0;">
 </details>
 
 为了避免传统系统常见的毛坯界面体验，EeveeAgent 的控制台经过多轮 AI 辅助设计与优化，逐步迭代完善，最终呈现出当前简洁、美观且实用的界面效果。
@@ -109,9 +109,9 @@ EeveeAgent 提供功能完善的管理后台，用于系统配置与运行管理
 
 IDEA 下载地址：https://www.jetbrains.com/zh-cn/idea
 
-![](./../../images/example12.png)
+![](resources/image/example12.png)
 
-![](./../../images/example13.png)
+![](resources/image/example13.png)
 
 ### 2. JDK 安装
 
@@ -122,7 +122,7 @@ Ragent 系统框架基于 SpringBoot3 开发，要求 JDK 版本不低于 17。�
 
 以 Windows 为例，大部分电脑为 x86 架构，选择第一个下载即可。
 
-![](./../../images/example14.png)
+![](resources/image/example14.png)
 
 
 
@@ -138,19 +138,19 @@ Ragent 系统框架基于 SpringBoot3 开发，要求 JDK 版本不低于 17。�
 
 
 
-![](./../../images/example15.png)
+![](resources/image/example15.png)
 
 
 
 打开 IntelliJ IDEA，在菜单栏找到 Git -> Clone 选项（不同操作系统位置可能略有差异）。
 
-![](./../../images/example16.png)
+![](resources/image/example16.png)
 
 
 
 在 URL 文本框中填写SSH 地址，Directory 填写项目在本地的存储路径。
 
-![](./../../images/example17.jpg)
+![](resources/image/example17.jpg)
 
 
 
@@ -162,25 +162,25 @@ Ragent 系统框架基于 SpringBoot3 开发，要求 JDK 版本不低于 17。�
 
 > Maven 版本过低或过高（3.9.3 及以上）可能导致与 IDEA 的兼容性问题，引发项目编译错误。
 
-![](./../../images/example17.png)
+![](resources/image/example17.png)
 
 ### 3. 配置 JDK17
 
 项目克隆成功后，在 IDEA 中打开 `Project Structure...` 配置，检查 JDK 版本。
 
-![](./../../images/example18.png)
+![](resources/image/example18.png)
 
 
 
 确认 JDK 版本为 17，否则会导致项目编译失败或 Maven 打包异常。Oracle、OpenJDK都可以
 
-![](./../../images/example19.png)
+![](resources/image/example19.png)
 
 
 
 配置完成后，点击项目右侧的 Maven 图标进行编译测试。如果 Maven 打包成功，说明环境配置正确，可以开始项目开发。
 
-![](./../../images/example20.jpg)
+![](resources/image/example20.jpg)
 
 
 
@@ -288,13 +288,13 @@ docker-compose ps
 
 Redis 客户端连接工具使用 [AnotherRedisDesktopManager](https://github.com/qishibo/AnotherRedisDesktopManager/releases)，大家点击链接可跳转 GitHub 下载最新版本。
 
-![](./../../images/example22.png)
+![](resources/image/example22.png)
 
 ### 2.Attu 管理界面
 
 进入之后就是Milvus数据库的可视化界面了
 
-![](./../../images/example23-1778067600051-36.png)
+![](resources/image/example23-1778067600051-36.png)
 
 
 
@@ -313,7 +313,7 @@ RustFS 提供了 Web 控制台，用于管理对象存储、创建存储桶（Bu
 
 打开控制台地址后，输入账号和密钥，点击 **登录** 按钮即可登录。
 
-![](./../../images/example24-1778067612571-38.png)
+![](resources/image/example24-1778067612571-38.png)
 
 
 
@@ -395,7 +395,7 @@ systemctl restart docker
 
 
 
-![](./../../images/example25.png)
+![](resources/image/example25.png)
 
 
 
