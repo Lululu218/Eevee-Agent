@@ -84,7 +84,7 @@ EeveeAgent 提供功能完善的管理后台，用于系统配置与运行管理
 
 
 
-<details>   <summary>管理后台截图（点击展开）</summary>    
+<details>   <summary>**管理后台截图**（点击展开）</summary>    
     <img src="resources/image/example07.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example08.png" alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example09.png"alt="截图1" style="width:100%;margin:5px 0;"><img src="resources/image/example10.png"alt="截图1" style="width:100%;margin:5px 0;">
     <img src="resources/image/example11.png"alt="截图1" style="width:100%;margin:5px 0;">
 </details>
@@ -130,7 +130,7 @@ Ragent 系统框架基于 SpringBoot3 开发，要求 JDK 版本不低于 17。�
 
 ### 1. 克隆项目
 
-打开 GitHub 项目地址：https://github.com/Comebr/EeveeAgent，复制 SSH 克隆地址。
+打开 GitHub 项目地址：https://github.com/Comebr/EeveeAgent  复制 SSH 克隆地址。
 
 > 如果访问 GitHub 较慢，可使用 Gitee 镜像地址：https://gitee.com/running-ayang/my-agent
 
