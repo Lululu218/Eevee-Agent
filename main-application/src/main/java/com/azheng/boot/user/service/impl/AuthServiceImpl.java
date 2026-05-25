@@ -2,6 +2,7 @@ package com.azheng.boot.user.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.azheng.boot.user.po.UserDO;
 import com.azheng.boot.user.mapper.UserMapper;
 import com.azheng.boot.user.request.LoginRequest;
@@ -31,8 +32,11 @@ public class AuthServiceImpl implements AuthService {
 
         // 根据用户名获取用户信息
         UserDO user = getUserByName(username);
+        String encodedPassword = user.getPassword();
+        boolean isMatch = BCrypt.checkpw(password, encodedPassword);
+
         // 校验
-        if(user == null || !user.getPassword().equals(password)) {
+        if(user == null || !isMatch) {
             throw new ClientException( "用户名或密码错误！");
         }
 

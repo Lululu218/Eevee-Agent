@@ -2,6 +2,7 @@ package com.azheng.boot.user.service.impl;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.azheng.boot.user.po.UserDO;
 import com.azheng.boot.user.enums.Role;
 import com.azheng.boot.user.mapper.UserMapper;
@@ -53,9 +54,12 @@ public class UserServiceImpl implements UserService {
         String role = normalizeRole(createUserRequest.getRole());
         //校验邮箱号长度
 
+        //密码加密存储
+        String encodedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
         UserDO userDO = UserDO.builder()
                 .username(userName)
-                .password(password)
+                .password(encodedPassword)
                 .role(role)
                 .avatar(StrUtil.trimToNull(createUserRequest.getAvatar()))
                 .build();
