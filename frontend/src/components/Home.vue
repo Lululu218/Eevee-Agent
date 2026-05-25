@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import BaseButton from './common/BaseButton.vue'
+import GithubBtn from './common/GithubBtn.vue'
 import logo from '../assets/logo.png'
 
 const router = useRouter()
@@ -54,6 +55,24 @@ const isInputFocused = ref(false) // 输入框焦点状态
 const chatContentRef = ref(null)
 const autoScroll = ref(true) // 自动滚动标志
 const showScrollButton = ref(false) // 是否显示回到底部的按钮
+const lastScrollTime = ref(0) // 记录最后滚动时间，用于判断是否是用户主动滚动
+
+// 流式输出配置 - 优化为快速输出
+const STREAM_UPDATE_INTERVAL = 10 // 每10ms更新一次UI
+const MIN_UPDATE_SIZE = 1 // 至少1个字符就更新
+
+// 快速输出延迟 - 不再使用打字机效果，改为实时流式输出
+const getStreamDelay = () => {
+  return STREAM_UPDATE_INTERVAL
+}
+
+// 检查是否应该自动滚动
+const shouldAutoScroll = () => {
+  if (!chatContentRef.value || !autoScroll.value) return false
+  const { scrollTop, scrollHeight, clientHeight } = chatContentRef.value
+  // 只有距离底部小于150px时才自动滚动
+  return (scrollHeight - scrollTop - clientHeight) < 150
+}
 
 // 会话状态管理Map，为每个会话维护独立的状态
 const sessionStates = ref(new Map())
@@ -130,22 +149,29 @@ const fetchUserInfo = async () => {
 // 滚动到聊天底部
 const scrollToBottom = async (force = false) => {
   await nextTick()
-  if (chatContentRef.value && (autoScroll.value || force)) {
-    chatContentRef.value.scrollTop = chatContentRef.value.scrollHeight
+  if (chatContentRef.value && (force || shouldAutoScroll())) {
+    chatContentRef.value.scrollTo({
+      top: chatContentRef.value.scrollHeight,
+      behavior: 'smooth'
+    })
   }
 }
 
 // 处理滚动事件，当用户手动滚动时，禁用自动滚动
 const handleScroll = () => {
-  if (chatContentRef.value) {
-    const { scrollTop, scrollHeight, clientHeight } = chatContentRef.value
-    const distanceToBottom = scrollHeight - scrollTop - clientHeight
-    // 当滚动位置离底部超过5px时，认为用户在查看历史内容，禁用自动滚动
-    // 减小阈值，使autoScroll更快地被禁用，减少抖动
-    autoScroll.value = distanceToBottom < 5
-    // 当不在底部时显示回到底部的按钮
-    showScrollButton.value = distanceToBottom >= 5
-  }
+  if (!chatContentRef.value) return
+  
+  const { scrollTop, scrollHeight, clientHeight } = chatContentRef.value
+  const distanceToBottom = scrollHeight - scrollTop - clientHeight
+  
+  // 记录滚动时间，用于判断是否是用户主动滚动
+  lastScrollTime.value = Date.now()
+  
+  // 当滚动位置离底部超过100px时，禁用自动滚动
+  autoScroll.value = distanceToBottom < 100
+  
+  // 当距离底部超过100px时显示回到底部的按钮
+  showScrollButton.value = distanceToBottom >= 100
 }
 
 // 发送消息
@@ -237,91 +263,42 @@ const sendMessage = async () => {
     let isComplete = false
     let receivedConversationId = currentConversationId.value
     
-    const startSmoothOutput = () => {
-        // 流式chunk分段输出配置
-        const MIN_CHUNK_SIZE = 5
-        const MAX_CHUNK_SIZE = 20
-        const CHAR_INTERVAL_MS = 12 // 每个字符的输出间隔
-        
-        let currentIndex = 0
-        
-        const processChunk = () => {
-          if (sessionState.isCancelling) return
-          
-          if (currentIndex >= buffer.length) {
-            if (isComplete) {
-              // 所有内容处理完成
-              const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
-              if (msgIndex !== -1) {
-                sessionState.messages[msgIndex] = {
-                  ...sessionState.messages[msgIndex],
-                  isStreaming: false,
-                  content: buffer // 确保最终内容完整
-                }
-              }
-              nextTick(() => {
-                if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
-                  scrollToBottom()
-                }
-              })
-            } else {
-              // 缓冲区已处理完但流式传输未结束，继续等待新数据
-              sessionState.outputTimer = setTimeout(processChunk, 50)
-            }
-            return
-          }
-          
-          // 生成随机chunk大小
-          const chunkSize = Math.min(
-            MAX_CHUNK_SIZE,
-            Math.max(MIN_CHUNK_SIZE, Math.floor(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1)) + MIN_CHUNK_SIZE),
-            buffer.length - currentIndex
-          )
-          
-          const chunk = buffer.substring(currentIndex, currentIndex + chunkSize)
-          let chunkIndex = 0
-          
-          const outputChar = () => {
-            if (sessionState.isCancelling) return
-            
-            if (chunkIndex < chunk.length) {
-              displayContent += chunk[chunkIndex]
-              chunkIndex++
-              
-              // 更新消息内容
-              const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
-              if (msgIndex !== -1) {
-                sessionState.messages[msgIndex] = {
-                  ...sessionState.messages[msgIndex],
-                  content: displayContent,
-                  isStreaming: true
-                }
-              }
-              
-              // 滚动到底部
-              nextTick(() => {
-                if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
-                  scrollToBottom()
-                }
-              })
-              
-              // 继续输出下一个字符
-              sessionState.outputTimer = setTimeout(outputChar, CHAR_INTERVAL_MS)
-            } else {
-              // 当前chunk输出完成，处理下一个chunk
-              currentIndex += chunkSize
-              // 片段之间几乎无延迟，直接处理下一个chunk
-              processChunk()
-            }
-          }
-          
-          // 开始输出当前chunk
-          outputChar()
-        }
-        
-        // 开始处理
-        processChunk()
+    // 直接使用requestAnimationFrame进行实时UI更新
+    const scheduleUIUpdate = () => {
+      if (sessionState.isCancelling) return
+      
+      // 每次更新都使用完整的buffer内容，确保Markdown正确渲染
+      updateMessageContent(buffer, true)
+      
+      // 继续等待新数据
+      if (!isComplete) {
+        sessionState.outputTimer = requestAnimationFrame(scheduleUIUpdate)
       }
+    }
+    
+    // 更新消息内容（使用不可变更新触发响应式）
+    const updateMessageContent = (content, isStreaming) => {
+      const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
+      if (msgIndex !== -1) {
+        // 使用不可变更新：创建新数组替换旧数组，确保Vue响应式触发
+        const newMessages = [...sessionState.messages]
+        newMessages[msgIndex] = {
+          ...newMessages[msgIndex],
+          content: content,
+          isStreaming: isStreaming,
+          isThinking: false,
+          renderKey: Date.now() + Math.random()  // 添加渲染key强制刷新MarkdownRenderer
+        }
+        sessionState.messages = newMessages
+        
+        // 滚动到底部
+        nextTick(() => {
+          if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
+            scrollToBottom()
+          }
+        })
+      }
+    }
     
     // 处理 init 事件，获取会话ID
     eventSource.addEventListener('init', (event) => {
@@ -372,22 +349,24 @@ const sendMessage = async () => {
           firstDataReceived = true
           const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
           if (msgIndex !== -1) {
-            sessionState.messages[msgIndex] = {
-              ...sessionState.messages[msgIndex],
+            // 使用不可变更新触发响应式
+            const newMessages = [...sessionState.messages]
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
               isThinking: false,
               isStreaming: true,
               content: ''
             }
+            sessionState.messages = newMessages
           }
         }
         
         // 非JSON数据，添加到buffer
         buffer += event.data
-        displayContent = buffer // 确保displayContent与buffer同步
         
-        // 如果是首次收到数据，启动输出
+        // 如果是首次收到数据，启动实时UI更新
         if (firstDataReceived && !sessionState.outputTimer) {
-          startSmoothOutput()
+          scheduleUIUpdate()
         }
       }
       
@@ -395,38 +374,37 @@ const sendMessage = async () => {
         eventSource.close()
         isComplete = true
         sessionState.isStreaming = false
-        // 等待缓冲区数据处理完成后再清理定时器和标记结束
-        const checkBuffer = () => {
-          if (buffer.length === 0) {
-            if (outputTimer) {
-              clearTimeout(outputTimer)
-              outputTimer = null
-            }
-            const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
-            if (msgIndex !== -1) {
-              // 一次性更新最终内容，确保代码高亮和语言显示正确
-              sessionState.messages[msgIndex] = {
-                ...sessionState.messages[msgIndex],
-                isStreaming: false,
-                content: buffer
-              }
-            }
-          } else {
-            // 继续等待缓冲区处理
-            setTimeout(checkBuffer, 50)
-          }
+        
+        // 使用cancelAnimationFrame清理定时器
+        if (sessionState.outputTimer) {
+          cancelAnimationFrame(sessionState.outputTimer)
+          sessionState.outputTimer = null
         }
-        checkBuffer()
-        if (!firstDataReceived) {
-          sessionState.messages = sessionState.messages.filter(msg => !msg.isThinking)
-          sessionState.messages.push({
-            id: Date.now() + 3,
-            content: '抱歉，处理您的请求时出现错误，请稍后重试。',
-            role: 'assistant',
-            timestamp: new Date().toISOString()
-          })
+        
+        const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
+        if (msgIndex !== -1) {
+          const newMessages = [...sessionState.messages]
+          if (!firstDataReceived) {
+            // 删除思考消息并添加错误消息
+            sessionState.messages = sessionState.messages.filter(msg => msg.id !== aiThinkingMessage.id)
+            sessionState.messages.push({
+              id: Date.now() + 3,
+              content: '抱歉，处理您的请求时出现错误，请稍后重试。',
+              role: 'assistant',
+              timestamp: new Date().toISOString()
+            })
+          } else {
+            // 一次性更新最终内容，确保代码高亮和语言显示正确
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
+              isStreaming: false,
+              content: buffer,
+              renderKey: Date.now() + Math.random()
+            }
+            sessionState.messages = newMessages
+          }
+          
           nextTick(() => {
-            // 只有当当前会话是激活会话时才滚动
             if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
               scrollToBottom()
             }
@@ -438,70 +416,73 @@ const sendMessage = async () => {
         eventSource.close()
         isComplete = true
         sessionState.isStreaming = false
-        // 等待缓冲区数据处理完成后再标记流式传输结束
-        const checkBuffer = () => {
-          if (buffer.length === 0) {
-            if (outputTimer) {
-              clearTimeout(outputTimer)
-              outputTimer = null
+        
+        // 使用cancelAnimationFrame清理定时器
+        if (sessionState.outputTimer) {
+          cancelAnimationFrame(sessionState.outputTimer)
+          sessionState.outputTimer = null
+        }
+        
+        // 一次性更新最终内容，确保代码高亮和语言显示正确
+        const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
+        if (msgIndex !== -1) {
+          const newMessages = [...sessionState.messages]
+          newMessages[msgIndex] = {
+            ...newMessages[msgIndex],
+            isStreaming: false,
+            content: buffer,
+            renderKey: Date.now() + Math.random()
+          }
+          sessionState.messages = newMessages
+          
+          nextTick(() => {
+            if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
+              scrollToBottom()
             }
-            const msgIndex = sessionState.messages.findIndex(msg => msg.id === aiThinkingMessage.id)
-            if (msgIndex !== -1) {
-              // 一次性更新最终内容，确保代码高亮和语言显示正确
-              sessionState.messages[msgIndex] = {
-                ...sessionState.messages[msgIndex],
-                isStreaming: false,
-                content: buffer
-              }
-            }
-            
-            // 检查是否是新会话且已收到conversationId
-            if (receivedConversationId && !currentConversationId.value) {
-              currentConversationId.value = receivedConversationId
-              
-              // 更新会话状态Map中的键
-              if (currentSessionId.includes('temp')) {
-                sessionStates.value.set(receivedConversationId, sessionState)
-                sessionStates.value.delete(currentSessionId)
-              }
-              
-              // 查找并更新临时会话
-              const tempConversationIndex = conversations.value.findIndex(c => c.isTemp === true)
-              if (tempConversationIndex !== -1) {
-                // 更新临时会话为真实会话
-                conversations.value[tempConversationIndex] = {
-                  ...conversations.value[tempConversationIndex],
-                  id: receivedConversationId,
-                  conversationId: receivedConversationId,
-                  isTemp: false
-                }
-              } else {
-                // 如果没有临时会话，创建新会话
-                const newConversation = {
-                  id: receivedConversationId,
-                  conversationId: receivedConversationId,
-                  userId: userInfo.value?.userId || localStorage.getItem('userId'),
-                  title: '新对话',
-                  lastTalkTime: new Date(),
-                  delFlag: 0
-                }
-                conversations.value.unshift(newConversation)
-              }
-            }
-            
-            // 主动获取后端生成的标题
-            if (receivedConversationId) {
-              // 等待后端生成标题（给后端一些时间处理）
-              setTimeout(() => {
-                fetchConversationTitle(receivedConversationId)
-              }, 1000)
+          })
+        }
+        
+        // 检查是否是新会话且已收到conversationId
+        if (receivedConversationId && !currentConversationId.value) {
+          currentConversationId.value = receivedConversationId
+          
+          // 更新会话状态Map中的键
+          if (currentSessionId.includes('temp')) {
+            sessionStates.value.set(receivedConversationId, sessionState)
+            sessionStates.value.delete(currentSessionId)
+          }
+          
+          // 查找并更新临时会话
+          const tempConversationIndex = conversations.value.findIndex(c => c.isTemp === true)
+          if (tempConversationIndex !== -1) {
+            // 更新临时会话为真实会话
+            conversations.value[tempConversationIndex] = {
+              ...conversations.value[tempConversationIndex],
+              id: receivedConversationId,
+              conversationId: receivedConversationId,
+              isTemp: false
             }
           } else {
-            // 继续等待缓冲区处理
-            setTimeout(checkBuffer, 50)
+            // 如果没有临时会话，创建新会话
+            const newConversation = {
+              id: receivedConversationId,
+              conversationId: receivedConversationId,
+              userId: userInfo.value?.userId || localStorage.getItem('userId'),
+              title: '新对话',
+              lastTalkTime: new Date(),
+              delFlag: 0
+            }
+            conversations.value.unshift(newConversation)
           }
         }
-        checkBuffer()
+        
+        // 主动获取后端生成的标题
+        if (receivedConversationId) {
+          // 等待后端生成标题（给后端一些时间处理）
+          setTimeout(() => {
+            fetchConversationTitle(receivedConversationId)
+          }, 1000)
+        }
       })
     
   } catch (error) {
@@ -527,7 +508,8 @@ const regenerateResponse = async (message) => {
       messages: [],
       isStreaming: false,
       eventSource: null,
-      currentRequestId: null
+      currentRequestId: null,
+      outputTimer: null
     })
   }
   const sessionState = sessionStates.value.get(currentSessionId)
@@ -564,96 +546,48 @@ const regenerateResponse = async (message) => {
       const eventSource = new EventSource(url)
       sessionState.eventSource = eventSource
       sessionState.isStreaming = true
+      sessionState.outputTimer = null
       
       let buffer = ''
       let displayContent = ''
       let firstDataReceived = false
       let isComplete = false
-      let outputTimer = null
       
-      const startSmoothOutput = () => {
-        // 流式chunk分段输出配置
-        const MIN_CHUNK_SIZE = 5
-        const MAX_CHUNK_SIZE = 20
-        const CHAR_INTERVAL_MS = 12 // 每个字符的输出间隔
+      // 直接使用requestAnimationFrame进行实时UI更新 - regenerate专用
+      const scheduleUIUpdateRegen = () => {
+        if (sessionState.isCancelling) return
         
-        let currentIndex = 0
+        // 每次更新都使用完整的buffer内容，确保Markdown正确渲染
+        updateMessageContentRegen(buffer, true)
         
-        const processChunk = () => {
-          if (currentIndex >= buffer.length) {
-            if (isComplete) {
-              // 所有内容处理完成
-              const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
-              if (msgIndex !== -1) {
-                sessionState.messages[msgIndex] = {
-                  ...sessionState.messages[msgIndex],
-                  isStreaming: false,
-                  content: buffer // 确保最终内容完整
-                }
-              }
-              nextTick(() => {
-                if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
-                  scrollToBottom()
-                }
-              })
-            }
-            return
-          }
-          
-          // 生成随机chunk大小
-          const chunkSize = Math.min(
-            MAX_CHUNK_SIZE,
-            Math.max(MIN_CHUNK_SIZE, Math.floor(Math.random() * (MAX_CHUNK_SIZE - MIN_CHUNK_SIZE + 1)) + MIN_CHUNK_SIZE),
-            buffer.length - currentIndex
-          )
-          
-          const chunk = buffer.substring(currentIndex, currentIndex + chunkSize)
-          let chunkIndex = 0
-          
-          const outputChar = () => {
-            if (chunkIndex < chunk.length) {
-              displayContent += chunk[chunkIndex]
-              chunkIndex++
-              
-              // 更新消息内容
-              const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
-              if (msgIndex !== -1) {
-                sessionState.messages[msgIndex] = {
-                  ...sessionState.messages[msgIndex],
-                  content: displayContent,
-                  isStreaming: true
-                }
-              }
-              
-              // 滚动到底部
-              nextTick(() => {
-                if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
-                  scrollToBottom()
-                }
-              })
-              
-              // 继续输出下一个字符
-              outputTimer = setTimeout(outputChar, CHAR_INTERVAL_MS)
-            } else {
-              // 当前chunk输出完成，处理下一个chunk
-              currentIndex += chunkSize
-              // 片段之间几乎无延迟，直接处理下一个chunk
-              processChunk()
-            }
-          }
-          
-          // 开始输出当前chunk
-          outputChar()
+        // 继续等待新数据
+        if (!isComplete) {
+          sessionState.outputTimer = requestAnimationFrame(scheduleUIUpdateRegen)
         }
-        
-        // 开始处理
-        processChunk()
-        
-        // 存储定时器以便清理
-        if (!window.__chatTimers) {
-          window.__chatTimers = []
+      }
+      
+      // 更新消息内容（使用不可变更新触发响应式）- regenerate专用
+      const updateMessageContentRegen = (content, isStreaming) => {
+        const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
+        if (msgIndex !== -1) {
+          // 使用不可变更新：创建新数组替换旧数组，确保Vue响应式触发
+          const newMessages = [...sessionState.messages]
+          newMessages[msgIndex] = {
+            ...newMessages[msgIndex],
+            content: content,
+            isStreaming: isStreaming,
+            isThinking: false,
+            renderKey: Date.now() + Math.random()  // 添加渲染key强制刷新MarkdownRenderer
+          }
+          sessionState.messages = newMessages
+          
+          // 滚动到底部
+          nextTick(() => {
+            if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
+              scrollToBottom()
+            }
+          })
         }
-        window.__chatTimers.push(outputTimer)
       }
       
       eventSource.onmessage = (event) => {
@@ -661,12 +595,15 @@ const regenerateResponse = async (message) => {
           firstDataReceived = true
           const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
           if (msgIndex !== -1) {
-            sessionState.messages[msgIndex] = {
-              ...sessionState.messages[msgIndex],
+            // 使用不可变更新触发响应式
+            const newMessages = [...sessionState.messages]
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
               isThinking: false,
               isStreaming: true,
               content: ''
             }
+            sessionState.messages = newMessages
           }
         }
         
@@ -684,9 +621,9 @@ const regenerateResponse = async (message) => {
           // 非JSON数据，添加到buffer
           buffer += event.data
           
-          // 如果是首次收到数据，启动输出
+          // 如果是首次收到数据，启动实时UI更新
           if (firstDataReceived && !sessionState.outputTimer) {
-            startSmoothOutput()
+            scheduleUIUpdateRegen()
           }
         }
       }
@@ -695,40 +632,35 @@ const regenerateResponse = async (message) => {
         eventSource.close()
         isComplete = true
         sessionState.isStreaming = false
-        // 等待缓冲区数据处理完成后再清理定时器和标记结束
-        const checkBuffer = () => {
-          if (buffer.length === 0) {
-            if (outputTimer) {
-              clearInterval(outputTimer)
-              outputTimer = null
-            }
-            const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
-            if (msgIndex !== -1) {
-              // 一次性更新最终内容，确保代码高亮和语言显示正确
-              sessionState.messages[msgIndex] = {
-                ...sessionState.messages[msgIndex],
-                isStreaming: false,
-                content: displayContent
-              }
-            }
-          } else {
-            // 继续等待缓冲区处理
-            setTimeout(checkBuffer, 50)
-          }
+        
+        // 使用cancelAnimationFrame清理定时器
+        if (sessionState.outputTimer) {
+          cancelAnimationFrame(sessionState.outputTimer)
+          sessionState.outputTimer = null
         }
-        checkBuffer()
-        if (!firstDataReceived) {
-          const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
-          if (msgIndex !== -1) {
-            sessionState.messages[msgIndex] = {
-              ...sessionState.messages[msgIndex],
+        
+        const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
+        if (msgIndex !== -1) {
+          const newMessages = [...sessionState.messages]
+          if (!firstDataReceived) {
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
               isThinking: false,
               isStreaming: false,
               content: '抱歉，处理您的请求时出现错误，请稍后重试。'
             }
+          } else {
+            // 一次性更新最终内容，确保代码高亮和语言显示正确
+            newMessages[msgIndex] = {
+              ...newMessages[msgIndex],
+              isStreaming: false,
+              content: buffer,
+              renderKey: Date.now() + Math.random()
+            }
           }
+          sessionState.messages = newMessages
+          
           nextTick(() => {
-            // 只有当当前会话是激活会话时才滚动
             if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
               scrollToBottom()
             }
@@ -740,28 +672,31 @@ const regenerateResponse = async (message) => {
         eventSource.close()
         isComplete = true
         sessionState.isStreaming = false
-        // 等待缓冲区数据处理完成后再标记流式传输结束
-        const checkBuffer = () => {
-          if (buffer.length === 0) {
-            if (outputTimer) {
-              clearInterval(outputTimer)
-              outputTimer = null
-            }
-            const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
-            if (msgIndex !== -1) {
-              // 一次性更新最终内容，确保代码高亮和语言显示正确
-              sessionState.messages[msgIndex] = {
-                ...sessionState.messages[msgIndex],
-                isStreaming: false,
-                content: displayContent
-              }
-            }
-          } else {
-            // 继续等待缓冲区处理
-            setTimeout(checkBuffer, 50)
-          }
+        
+        // 使用cancelAnimationFrame清理定时器
+        if (sessionState.outputTimer) {
+          cancelAnimationFrame(sessionState.outputTimer)
+          sessionState.outputTimer = null
         }
-        checkBuffer()
+        
+        // 一次性更新最终内容，确保代码高亮和语言显示正确
+        const msgIndex = sessionState.messages.findIndex(msg => msg.id === message.id)
+        if (msgIndex !== -1) {
+          const newMessages = [...sessionState.messages]
+          newMessages[msgIndex] = {
+            ...newMessages[msgIndex],
+            isStreaming: false,
+            content: buffer,
+            renderKey: Date.now() + Math.random()
+          }
+          sessionState.messages = newMessages
+          
+          nextTick(() => {
+            if (currentConversationId.value === currentSessionId || (!currentConversationId.value && currentSessionId.includes('temp'))) {
+              scrollToBottom()
+            }
+          })
+        }
       })
       
     } catch (error) {
@@ -970,15 +905,20 @@ const cancelStreaming = async () => {
   autoScroll.value = false
   
   // 5. 保留已经生成完的文字，更新UI状态
-  const streamingMessageIndex = sessionState.messages.findIndex(msg => msg.isStreaming)
+  // 查找流式或思考中的消息（isStreaming 或 isThinking）
+  const streamingMessageIndex = sessionState.messages.findIndex(
+    msg => msg.isStreaming || msg.isThinking
+  )
   if (streamingMessageIndex !== -1) {
-    // 保留已输出的内容，不清空
-    sessionState.messages[streamingMessageIndex] = {
-      ...sessionState.messages[streamingMessageIndex],
+    // 使用不可变更新：创建新数组替换旧数组，确保Vue响应式触发
+    const newMessages = [...sessionState.messages]
+    newMessages[streamingMessageIndex] = {
+      ...newMessages[streamingMessageIndex],
       isStreaming: false,
       isThinking: false
       // content保持原样，不追加任何文字
     }
+    sessionState.messages = newMessages
   }
   
   // 6. UI 状态重置
@@ -1017,6 +957,17 @@ const scrollToBottomManually = async () => {
 
 // 深度思考模式
 const deepThinking = ref(false)
+
+// 角色映射
+const roleMap = {
+  admin: '管理员',
+  viewer: '游客'
+}
+
+// 获取角色显示文本
+const getRoleText = (role) => {
+  return roleMap[role] || role
+}
 
 const toggleDeepThinking = () => {
   deepThinking.value = !deepThinking.value
@@ -1624,7 +1575,7 @@ const goToAdmin = () => {
               </div>
               <div class="user-details">
                 <div class="username">{{ userInfo?.username || 'MOMO' }}</div>
-                <div class="role">{{ userInfo?.role || 'User' }}</div>
+                <div class="role">{{ getRoleText(userInfo?.role) || 'User' }}</div>
               </div>
               <button class="more-button">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1672,6 +1623,9 @@ const goToAdmin = () => {
           </button>
         </div>
         <div class="header-right">
+          <!-- GitHub按钮 -->
+          <GithubBtn :size="32  " />
+          
           <!-- 管理后台按钮 -->
           <button class="admin-button" @click="goToAdmin">
             <svg class="icon" viewBox="0 0 1821 1024" width="32" height="32">
@@ -1698,35 +1652,39 @@ const goToAdmin = () => {
               <polyline points="18 15 12 21 6 15"/>
             </svg>
           </button>
-          <!-- 消息列表 -->
-          <div v-if="messages.length === 0" class="welcome-message">
-            <div class="welcome-content">
-              <h1 class="welcome-title">有什么我能帮你的吗？</h1>
-              
-              <!-- 热门问题标签 -->
-              <div class="hot-questions-container">
-                <div 
-                  v-for="(question, index) in sampleQuestions" 
-                  :key="index"
-                  class="hot-question-tag"
-                  @click="selectSampleQuestion(question)"
-                >
-                  {{ question.question }}
-                </div>
-                <div v-if="isLoadingSampleQuestions" class="loading-hot-questions">
-                  <div class="loading-spinner"></div>
-                  <span>加载中...</span>
-                </div>
-                <div v-if="!isLoadingSampleQuestions && sampleQuestions.length === 0" class="no-hot-questions">
-                  <span>暂无热门问题</span>
+          <!-- 消息列表 - 添加过渡动画 -->
+          <Transition name="conversation" mode="out-in">
+            <div :key="currentConversationId || 'empty'" class="chat-view">
+              <!-- 欢迎页面 -->
+              <div v-if="messages.length === 0" class="welcome-message">
+                <div class="welcome-content">
+                  <h1 class="welcome-title">有什么我能帮你的吗？</h1>
+                  
+                  <!-- 热门问题标签 -->
+                  <div class="hot-questions-container">
+                    <div 
+                      v-for="(question, index) in sampleQuestions" 
+                      :key="index"
+                      class="hot-question-tag"
+                      @click="selectSampleQuestion(question)"
+                    >
+                      {{ question.question }}
+                    </div>
+                    <div v-if="isLoadingSampleQuestions" class="loading-hot-questions">
+                      <div class="loading-spinner"></div>
+                      <span>加载中...</span>
+                    </div>
+                    <div v-if="!isLoadingSampleQuestions && sampleQuestions.length === 0" class="no-hot-questions">
+                      <span>暂无热门问题</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <div v-else class="message-list">
-            <!-- 用户消息 -->
-            <div v-for="message in messages" :key="message.id" :class="['message-item', message.role]">
+              
+              <!-- 消息列表 -->
+              <div v-else class="message-list">
+                <!-- 用户消息 -->
+                <div v-for="message in messages" :key="message.id" :class="['message-item', message.role]">
               <div v-if="message.role === 'user'" class="user-message">
                 <div class="message-content">{{ message.content }}</div>
                 <div class="message-avatar">
@@ -1756,6 +1714,7 @@ const goToAdmin = () => {
                     <MarkdownRenderer 
                       :content="message.content" 
                       :is-streaming="message.isStreaming"
+                      :key="message.renderKey || message.id"
                     />
                   </div>
                   
@@ -1797,6 +1756,8 @@ const goToAdmin = () => {
               </div>
             </div>
           </div>
+            </div>
+          </Transition>
         </div>
         
         <!-- 输入区域 -->
@@ -2358,8 +2319,7 @@ html, body {
   gap: 1px;
   padding: 8px 16px;
   background-color: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 20px;
+  border: 1.5px solid #e5e7eb;  border-radius: 20px;
   font-size: 16px;
   color: #667eea;
   cursor: pointer;
@@ -2373,6 +2333,8 @@ html, body {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
+
+
 
 .new-chat-button {
   display: flex;
@@ -2623,6 +2585,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   position: relative;
   /* 隐藏滚动条 */
   scrollbar-width: none; /* Firefox */
@@ -2678,9 +2641,46 @@ html, body {
 .welcome-title {
   font-size: 32px;
   font-weight: 600;
-  color: #333;
+  color: #667eea;
   margin-bottom: 40px;
   text-align: center;
+  position: relative;
+  animation: floatUp 4s ease-in-out infinite;
+  text-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.welcome-title::before {
+  content: '有什么我能帮你的吗？';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+  filter: blur(20px);
+  animation: breatheGlow 3s ease-in-out infinite;
+  z-index: -1;
+  opacity: 0.6;
+}
+
+@keyframes breatheGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.9;
+  }
+}
+
+@keyframes floatUp {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* 热门问题标签样式 */
@@ -3358,5 +3358,38 @@ html, body {
   background-color: #ff7875;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(255, 77, 79, 0.3);
+}
+
+/* 会话切换过渡动画 */
+.chat-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.conversation-enter-active,
+.conversation-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.conversation-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.conversation-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.conversation-enter-to,
+.conversation-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.conversation-move {
+  transition: transform 0.3s ease-out;
 }
 </style>
