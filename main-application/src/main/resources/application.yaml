@@ -51,7 +51,7 @@ mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.azheng.framework.user.entity
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 
 
@@ -61,7 +61,7 @@ langchain4j:
     dashscope:
       api-key: ${BAILIAN_API_KEY}
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      dimensions: 2048
+      dimensions: 768
       rerank-model-name: qwen3-rerank
   # --OpenAI
   open-ai:
@@ -82,13 +82,57 @@ rustfs:
   access-key-id: rustfsadmin
   secret-access-key: rustfsadmin
 
-#---RAG 向量库基础配置---
-rag:
-  default:
-    collection-name: rag_default_store   # Milvus 集合名（知识库表）
-    dimension: 2048                     # 向量维度 → 必须和 embedding 模型一致
-    metric-type: COSINE                 # 相似度算法（余弦相似度，正确）
+intent:
+  topk: 30
 
+
+# AI系统配置：RAG、多模型容错、向量化
+ai:
+  # 默认路由策略: PRIORITY / ROUND_ROBIN / FAILOVER / LOAD_BALANCE
+  default-strategy: PRIORITY
+
+  # 熔断配置开关
+  circuit-breaker-enabled: true
+  retry-enabled: true
+  rate-limiter-enabled: true
+
+  #全局向量化维度
+  dimensions: 2048
+
+  #1. 硅基流动（聚合平台：DeepSeek / Kimi / BGE）主模型
+  silicon-flow:
+      order: 1
+      enabled: true
+      api-key: ${SILICONFLOW_API_KEY}
+      base-url: https://api.siliconflow.cn/v1
+      stream-model: deepseek-ai/DeepSeek-V4-Flash
+      background-model: deepseek-ai/DeepSeek-V3.2
+      embedding-model: Pro/BAAI/bge-m3
+      rate-limit: 200
+
+  #2. 阿里百炼（备用）
+  bai-lian:
+    order: 2
+    enabled: true
+    api-key: ${BAILIAN_API_KEY}
+    base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    stream-model: qwen-flash
+    background-model: qwen-turbo
+    embedding-model: text-embedding-v4
+    rate-limit: 100
+
+  #3. 智谱AI（GLM 系列 兜底）
+  zhi-pu:
+    order: 3
+    enabled: true
+    api-key: ${GLM_API_KEY}
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    stream-model: glm-4v-flashx
+    background-model: glm-4-air-250414
+    embedding-model: embedding-3
+    rate-limit: 100
+
+  #多路检索配置
   search:
     channels:
       vector-global:
@@ -98,10 +142,37 @@ rag:
         min-intent-score: 0.4
         top-k-multiplier: 2
 
+#resilience4j熔断机制
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        # 滑动窗口大小
+        sliding-window-size: 100
+        # 失败率阈值（超过此值触发熔断）
+        failure-rate-threshold: 50
+        # 熔断开启时间（秒）
+        wait-duration-in-open-state: 60000
+        # 半开状态下允许的请求数
+        permitted-number-of-calls-in-half-open-state: 10
+        # 忽略的异常类型
+        ignore-exceptions:
+          - com.azheng.framework.exception.ClientException
 
-intent:
-  topk: 30
+  retry:
+    configs:
+      default:
+        # 最大重试次数
+        max-attempts: 2
+        # 重试间隔（毫秒）
+        wait-duration: 1000
 
-
-
-
+  ratelimiter:
+    configs:
+      default:
+        # 限流速率（每秒）
+        limit-for-period: 100
+        # 限流周期
+        limit-refresh-period: 1s
+        # 超时等待时间
+        timeout-duration: 5000ms
