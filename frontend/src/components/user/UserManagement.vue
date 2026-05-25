@@ -351,45 +351,44 @@ onMounted(() => {
 
 <template>
   <div class="user-management">
-    <!-- 搜索区域 -->
-    <BaseCard>
-      <div class="search-area">
-        <div class="search-form">
-          <div class="form-item">
-            <input 
-              v-model="searchForm.username" 
-              type="text" 
-              placeholder="请输入用户名"
-              @keyup.enter="handleSearch"
-            />
-          </div>
-          <BaseButton type="primary" @click="handleSearch">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1 class="page-title">用户管理</h1>
+      </div>
+      <div class="header-right">
+        <div class="search-box">
+          <input
+            v-model="searchForm.username"
+            type="text"
+            placeholder="请输入用户名"
+            @keyup.enter="handleSearch"
+          />
+          <button class="search-button" @click="handleSearch">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
-              <path d="M21 21l-4.35-4.35"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            搜索
-          </BaseButton>
-          <BaseButton @click="handleReset">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-            </svg>
-            重置
-          </BaseButton>
+          </button>
         </div>
+        <button class="refresh-button" @click="handleReset">
+          <svg width="16" height="16" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M524.8 106.666667c-106.666667 0-209.066667 42.666667-285.866667 110.933333l-8.533333-68.266667c0-25.6-21.333333-42.666667-46.933333-38.4-25.6 0-42.666667 21.333333-38.4 46.933334l8.533333 115.2c4.266667 55.466667 51.2 98.133333 106.666667 98.133333h8.533333L384 362.666667c25.6 0 42.666667-21.333333 38.4-46.933334 0-25.6-21.333333-42.666667-46.933333-38.4l-85.333334 4.266667c64-55.466667 145.066667-89.6 230.4-89.6 187.733333 0 341.333333 153.6 341.333334 341.333333s-153.6 341.333333-341.333334 341.333334-341.333333-153.6-341.333333-341.333334c0-25.6-17.066667-42.666667-42.666667-42.666666s-42.666667 17.066667-42.666666 42.666666c0 234.666667 192 426.666667 426.666666 426.666667s426.666667-192 426.666667-426.666667c4.266667-234.666667-187.733333-426.666667-422.4-426.666666z" fill="currentColor"/>
+          </svg>
+          重置
+        </button>
         <BaseButton type="primary" @click="handleAdd">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           新增用户
         </BaseButton>
       </div>
-    </BaseCard>
+    </div>
 
     <!-- 表格区域 -->
-    <BaseCard>
+    <div class="user-list">
       <BaseTable
         :columns="columns"
         :data="userList"
@@ -398,7 +397,7 @@ onMounted(() => {
         :pageSize="pagination.size"
         :loading="loading"
         @page-change="handlePageChange"
-        @size-change="handleSizeChange"
+        @page-size-change="handleSizeChange"
       >
         <template #avatar="{ row }">
           <div class="avatar-cell">
@@ -433,7 +432,12 @@ onMounted(() => {
           </div>
         </template>
       </BaseTable>
-    </BaseCard>
+
+      <div v-if="userList.length === 0 && !loading" class="empty-state">
+        <div class="empty-icon">👥</div>
+        <p>暂无用户</p>
+      </div>
+    </div>
 
     <!-- 新增/编辑对话框 -->
     <div v-if="dialogVisible" class="dialog-overlay" @click.self="dialogVisible = false">
@@ -553,40 +557,145 @@ onMounted(() => {
 
 <style scoped>
 .user-management {
-  padding: 20px;
+  padding: 24px;
+  min-height: calc(100vh - 80px);
+  background-color: #f5f7fa;
 }
 
-/* 搜索区域 */
-.search-area {
+/* 页面头部 */
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
 }
 
-.search-form {
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.header-right {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
-.search-form .form-item input {
-  width: 240px;
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background-color: white;
+  border: 1px solid #e8e8e8;
   border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.2s;
+  width: 280px;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.search-form .form-item input:focus {
-  outline: none;
+.search-box:hover {
   border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  background: white;
+  font-size: 14px;
+  color: #333;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.search-box input::placeholder {
+  color: #999;
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: none;
+  border-left: 1px solid #e8e8e8;
+  color: #999;
+  cursor: pointer;
+  padding: 10px 12px;
+  transition: all 0.3s;
+}
+
+.search-button:hover {
+  color: #667eea;
+  background-color: #fafbff;
+}
+
+/* 刷新按钮 */
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.refresh-button:hover {
+  background-color: #fafbff;
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+/* 用户列表 */
+.user-list {
+  overflow: visible;
+}
+
+.user-list table {
+  transition: all 0.3s ease;
+}
+
+.user-list tr {
+  transition: all 0.3s ease;
+}
+
+.user-list tr:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.1);
+}
+
+.user-list tr:hover td {
+  background-color: #fafbff;
+  color: #333;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #999;
+}
+
+.empty-icon {
+  margin-bottom: 16px;
+  color: #d9d9d9;
+  font-size: 48px;
 }
 
 /* 按钮样式 */
@@ -905,6 +1014,8 @@ onMounted(() => {
 
 .dialog-body {
   padding: 24px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .form .form-item {
@@ -1056,5 +1167,39 @@ onMounted(() => {
 
 .message-content svg {
   flex-shrink: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .user-management {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .header-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .refresh-button {
+    align-self: flex-start;
+  }
+
+  .dialog {
+    width: 95%;
+    max-height: 90vh;
+  }
 }
 </style>
