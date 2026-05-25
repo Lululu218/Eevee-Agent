@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LLMConfig {
 
-    @Value(value = "${langchain4j.community.dashscope.base-url}")
+    @Value(value = "${ai.bai-lian.base-url}")
     private String baseUrl;
 
-    @Value(value = "${langchain4j.community.dashscope.api-key}")
+    @Value(value = "${ai.bai-lian.api-key}")
     private String apiKey;
 
-    @Value(value = "${langchain4j.community.dashscope.dimensions}")
+    @Value(value = "${ai.dimensions}")
     private Integer dimensions;
 
     /**

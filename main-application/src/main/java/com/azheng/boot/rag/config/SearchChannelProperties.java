@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Data
 @Component
-@ConfigurationProperties(prefix = "rag.search")
+@ConfigurationProperties(prefix = "ai.search")
 public class SearchChannelProperties {
 
     private Channels channels = new Channels();

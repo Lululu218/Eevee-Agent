@@ -37,7 +37,7 @@ import java.util.*;
 @Component
 public class MilvusOperations {
 
-    @Value(value = "${langchain4j.community.dashscope.dimensions}")
+    @Value(value = "${ai.dimensions}")
     private Integer dimension;
 
     @Resource
