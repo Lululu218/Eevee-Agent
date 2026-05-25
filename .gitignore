@@ -37,3 +37,6 @@ scripts/logs/
 
 ### Mac OS ###
 .DS_Store
+
+# Maven 扁平化插件自动生成的文件，忽略提交
+.flattened-pom.xml
