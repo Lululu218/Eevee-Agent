@@ -13,6 +13,7 @@
         <module>main-application</module>
         <module>core-framework</module>
         <module>eevee-ai</module>
+        <module>mcp-server</module>
     </modules>
     <packaging>pom</packaging>
     <description>EeveeAgent致力打造一流AI项目</description>
