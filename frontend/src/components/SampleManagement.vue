@@ -43,10 +43,6 @@ const showMessage = ref(false)
 const messageText = ref('')
 const messageType = ref('success')
 
-const totalPages = computed(() => {
-  return Math.ceil(pagination.total / pagination.size) || 1
-})
-
 const columns = [
   { key: 'title', title: '标题' },
   { key: 'description', title: '描述' },
@@ -113,9 +109,14 @@ const handleRefresh = () => {
   loadSampleList()
 }
 
-const changePage = (page) => {
-  if (page < 1 || page > totalPages.value) return
+const handlePageChange = (page) => {
   pagination.current = page
+  loadSampleList()
+}
+
+const handlePageSizeChange = (size) => {
+  pagination.size = size
+  pagination.current = 1
   loadSampleList()
 }
 
@@ -243,93 +244,83 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sample-management">
+  <div class="page-content sample-page">
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h2 class="page-title">示例管理</h2>
-      <div class="header-actions">
-        <BaseButton type="secondary" @click="emit('back')">
-          返回
-        </BaseButton>
+      <div class="header-left">
+        <h1 class="page-title">示例管理</h1>
       </div>
-    </div>
-
-    <div class="sample-content">
-      <div class="toolbar">
+      <div class="header-right">
         <div class="search-box">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="搜索标题、描述或问题内容"
+            placeholder="请输入要搜索的内容"
             @keyup.enter="handleSearch"
-            class="search-input"
           />
-          <BaseButton type="primary" @click="handleSearch" size="small">
-            搜索
-          </BaseButton>
+          <button class="search-button" @click="handleSearch">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
         </div>
-        <div class="action-buttons">
-          <BaseButton type="secondary" @click="handleRefresh">
-            刷新
-          </BaseButton>
-          <BaseButton type="primary" @click="showCreateModal = true">
-            新增示例
-          </BaseButton>
-        </div>
+        <button class="refresh-button" @click="handleRefresh">
+          <svg width="16" height="16" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M524.8 106.666667c-106.666667 0-209.066667 42.666667-285.866667 110.933333l-8.533333-68.266667c0-25.6-21.333333-42.666667-46.933333-38.4-25.6 0-42.666667 21.333333-38.4 46.933334l8.533333 115.2c4.266667 55.466667 51.2 98.133333 106.666667 98.133333h8.533333L384 362.666667c25.6 0 42.666667-21.333333 38.4-46.933334 0-25.6-21.333333-42.666667-46.933333-38.4l-85.333334 4.266667c64-55.466667 145.066667-89.6 230.4-89.6 187.733333 0 341.333333 153.6 341.333334 341.333333s-153.6 341.333333-341.333334 341.333334-341.333333-153.6-341.333333-341.333334c0-25.6-17.066667-42.666667-42.666667-42.666666s-42.666667 17.066667-42.666666 42.666666c0 234.666667 192 426.666667 426.666666 426.666667s426.666667-192 426.666667-426.666667c4.266667-234.666667-187.733333-426.666667-422.4-426.666666z" fill="currentColor"/>
+          </svg>
+          刷新
+        </button>
+        <BaseButton type="primary" @click="showCreateModal = true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          新增示例
+        </BaseButton>
       </div>
+    </div>
 
+    <!-- 示例列表 -->
+    <div class="sample-list">
       <BaseTable
         :columns="columns"
         :data="sampleList"
         :loading="loading"
+        :total="pagination.total"
+        :pageSize="pagination.size"
+        :currentPage="pagination.current"
+        :showPagination="true"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
       >
         <template #action="{ row }">
-          <div class="action-cell">
-            <button class="btn-edit" @click="handleEdit(row)">
+          <div class="table-actions">
+            <BaseButton type="primary" size="small" @click="handleEdit(row)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              编辑
-            </button>
-            <button class="btn-delete" @click="handleDeleteClick(row)">
+            </BaseButton>
+            <BaseButton type="danger" size="small" @click="handleDeleteClick(row)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
               </svg>
-              删除
-            </button>
+            </BaseButton>
           </div>
         </template>
       </BaseTable>
 
       <div v-if="sampleList.length === 0 && !loading" class="empty-state">
-        <svg class="empty-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
+        <div class="empty-icon">📋</div>
         <p>暂无示例问题</p>
-      </div>
-
-      <div v-if="pagination.total > 0" class="pagination">
-        <button
-          class="page-btn"
-          :disabled="pagination.current === 1"
-          @click="changePage(pagination.current - 1)"
-        >
-          上一页
-        </button>
-        <span class="page-info">
-          第 {{ pagination.current }} / {{ totalPages }} 页
-        </span>
-        <button
-          class="page-btn"
-          :disabled="pagination.current === totalPages"
-          @click="changePage(pagination.current + 1)"
-        >
-          下一页
-        </button>
       </div>
     </div>
 
+    <!-- 消息提示 -->
     <div v-if="showMessage" :class="['toast-message', messageType]">
       <div class="toast-content">
         <svg v-if="messageType === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -349,18 +340,15 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- 新建示例弹窗 -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="modal">
         <div class="modal-header">
           <h3 class="modal-title">新建示例问题</h3>
-          <BaseButton type="secondary" class="close-button" @click="showCreateModal = false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </BaseButton>
+          <BaseButton type="secondary" size="small" @click="showCreateModal = false" class="close-button">&times;</BaseButton>
         </div>
         <div class="modal-body">
+          <p class="modal-subtitle">创建新的示例问题，用于训练和测试系统</p>
           <div class="form-group">
             <label class="form-label">标题 <span class="optional">(可选)</span></label>
             <input
@@ -390,28 +378,21 @@ onMounted(() => {
           </div>
         </div>
         <div class="modal-footer">
-          <BaseButton type="secondary" @click="showCreateModal = false">
-            取消
-          </BaseButton>
-          <BaseButton type="primary" @click="handleCreate">
-            确定
-          </BaseButton>
+          <BaseButton type="secondary" @click="showCreateModal = false">取消</BaseButton>
+          <BaseButton type="primary" @click="handleCreate">创建</BaseButton>
         </div>
       </div>
     </div>
 
+    <!-- 编辑示例弹窗 -->
     <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
       <div class="modal">
         <div class="modal-header">
           <h3 class="modal-title">编辑示例问题</h3>
-          <BaseButton type="secondary" class="close-button" @click="showEditModal = false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </BaseButton>
+          <BaseButton type="secondary" size="small" @click="showEditModal = false" class="close-button">&times;</BaseButton>
         </div>
         <div class="modal-body">
+          <p class="modal-subtitle">修改示例问题的内容和描述</p>
           <div class="form-group">
             <label class="form-label">标题 <span class="optional">(可选)</span></label>
             <input
@@ -441,33 +422,33 @@ onMounted(() => {
           </div>
         </div>
         <div class="modal-footer">
-          <BaseButton type="secondary" @click="showEditModal = false">
-            取消
-          </BaseButton>
-          <BaseButton type="primary" @click="handleUpdate">
-            确定
-          </BaseButton>
+          <BaseButton type="secondary" @click="showEditModal = false">取消</BaseButton>
+          <BaseButton type="primary" @click="handleUpdate">保存</BaseButton>
         </div>
       </div>
     </div>
 
+    <!-- 删除确认弹窗 -->
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="handleDeleteCancel">
-      <div class="modal modal-small">
+      <div class="modal delete-modal">
         <div class="modal-header">
           <h3 class="modal-title">确认删除</h3>
+          <BaseButton type="secondary" size="small" @click="handleDeleteCancel" class="close-button">&times;</BaseButton>
         </div>
         <div class="modal-body">
-          <p class="confirm-text">
-            确定要删除示例问题「{{ itemToDelete?.question }}」吗？此操作不可恢复。
-          </p>
+          <div class="delete-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <p class="delete-message">确定要删除示例问题吗？</p>
+          <p class="delete-hint">此操作不可撤销，删除后相关数据将被永久清除。</p>
         </div>
         <div class="modal-footer">
-          <BaseButton type="secondary" @click="handleDeleteCancel">
-            取消
-          </BaseButton>
-          <BaseButton type="danger" @click="handleDeleteConfirm">
-            删除
-          </BaseButton>
+          <BaseButton type="secondary" @click="handleDeleteCancel">取消</BaseButton>
+          <BaseButton type="danger" @click="handleDeleteConfirm">删除</BaseButton>
         </div>
       </div>
     </div>
@@ -475,9 +456,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.sample-management {
+.sample-page {
   padding: 24px;
   min-height: calc(100vh - 80px);
+  background-color: #f5f7fa;
 }
 
 .page-header {
@@ -494,93 +476,114 @@ onMounted(() => {
   margin: 0;
 }
 
-.header-actions {
+.header-right {
   display: flex;
-  gap: 12px;
-}
-
-.sample-content {
-  margin-top: 20px;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .search-box {
   display: flex;
+  align-items: center;
   gap: 8px;
-  flex: 1;
-  max-width: 500px;
+  padding: 0;
+  background-color: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  width: 280px;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.search-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: all 0.3s;
+.search-box:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
-.search-input:focus {
+.search-box input {
+  border: none;
   outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  background: white;
+  font-size: 14px;
+  color: #333;
+  width: 100%;
+  padding: 10px 12px;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 8px;
+.search-box input::placeholder {
+  color: #999;
 }
 
-.action-cell {
+.search-button {
   display: flex;
-  gap: 8px;
   align-items: center;
+  justify-content: center;
+  background: white;
+  border: none;
+  border-left: 1px solid #e8e8e8;
+  color: #999;
+  cursor: pointer;
+  padding: 10px 12px;
+  transition: all 0.3s;
 }
 
-.btn-edit {
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #ffffff;
+.search-button:hover {
+  color: #667eea;
+  background-color: #fafbff;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
   color: #666;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.refresh-button:hover {
+  background-color: #fafbff;
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.sample-list {
+  overflow: visible;
+}
+
+.sample-list table {
+  transition: all 0.3s ease;
+}
+
+.sample-list tr {
+  transition: all 0.3s ease;
+}
+
+.sample-list tr:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.1);
+}
+
+.sample-list tr:hover td {
+  background-color: #fafbff;
+  color: #333;
+}
+
+.table-actions {
   display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-edit:hover {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.btn-delete {
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #ff4d4f;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-delete:hover {
-  border-color: #ff4d4f;
-  background: #fff1f0;
+  gap: 8px;
 }
 
 .empty-state {
@@ -592,42 +595,7 @@ onMounted(() => {
 .empty-icon {
   margin-bottom: 16px;
   color: #d9d9d9;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.page-btn {
-  padding: 6px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #666;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-info {
-  font-size: 14px;
-  color: #666;
+  font-size: 48px;
 }
 
 .toast-message {
@@ -706,10 +674,6 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.modal-small {
-  max-width: 400px;
-}
-
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid #f0f0f0;
@@ -735,6 +699,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  max-height: 400px;
 }
 
 .modal-footer {
@@ -805,36 +770,31 @@ onMounted(() => {
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
-.confirm-text {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-}
-
 @media (max-width: 768px) {
-  .sample-management {
+  .sample-page {
     padding: 16px;
-  }
-
-  .toolbar {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  .search-box {
-    max-width: 100%;
-  }
-
-  .action-buttons {
-    justify-content: flex-end;
   }
 
   .page-header {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+
+  .header-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .refresh-button {
+    align-self: flex-start;
   }
 
   .modal {
