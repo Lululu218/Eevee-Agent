@@ -3,6 +3,7 @@ package com.azheng.boot.rag.service.Impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import com.azheng.agent.model.AiModelRouter;
 import com.azheng.boot.rag.config.LLMConfig;
 import com.azheng.boot.rag.core.intent.IntentGroup;
 import com.azheng.boot.rag.core.intent.IntentResolver;
@@ -37,6 +38,7 @@ import dev.langchain4j.rag.query.Query;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -50,6 +52,7 @@ import java.util.concurrent.Executor;
 import static com.azheng.boot.rag.constant.RAGConstant.*;
 
 /* RAG模块 */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RAGChatServiceImpl implements RAGChatService {
@@ -64,6 +67,7 @@ public class RAGChatServiceImpl implements RAGChatService {
     private final PromptTemplateLoader promptTemplateLoader;
     private final AbstractCompressService abstractCompressService;
     private final HistoryAbstractStore historyAbstractStore;
+    private final AiModelRouter aiModelRouter;
 
     @Qualifier("streamHandleCache")
     private final Cache<String, StreamingHandle> streamHandleCache;
@@ -101,7 +105,8 @@ public class RAGChatServiceImpl implements RAGChatService {
         }
 
         // 按条件构造本次聊天模型
-        StreamingChatModel streamingChatModel = llmConfig.buildQwenFlashStreamingModel(openThinking);
+        StreamingChatModel streamingChatModel = aiModelRouter.routerStreamingCHatModel(openThinking);
+//        StreamingChatModel streamingChatModel = llmConfig.buildQwenFlashStreamingModel(openThinking);
 
         // 根据会话id获取会话信息缓存
         ChatMemory chatMemory = originalChatMemoryProvider.get(actualConversationId);
@@ -296,6 +301,7 @@ public class RAGChatServiceImpl implements RAGChatService {
             public void onCompleteResponse(ChatResponse completeResponse) {
                 // 1.返回推理过程
                 try {
+                    log.info("本次思考过程："+"\n"+completeResponse.aiMessage().thinking());
                     String text = completeResponse.aiMessage().text();
                     // 收到成功响应文本直接开始异步收尾
                     CompletableFuture.runAsync(() ->
