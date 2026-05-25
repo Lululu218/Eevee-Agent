@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import UserManagement from './user/UserManagement.vue'
-import DataOverview from './DataOverview.vue'
+import Dashboard from './dashboard/Dashboard.vue'
 import SampleManagement from './SampleManagement.vue'
 import BaseCard from './common/BaseCard.vue'
 import BaseTable from './common/BaseTable.vue'
@@ -11,6 +11,7 @@ import BaseButton from './common/BaseButton.vue'
 import BaseForm from './common/BaseForm.vue'
 import FormField from './common/FormField.vue'
 import ScrollableContainer from './common/ScrollableContainer.vue'
+import GithubBtn from './common/GithubBtn.vue'
 import logo from '../assets/logo.png'
 
 const router = useRouter()
@@ -757,7 +758,7 @@ const refreshKnowledgeList = () => {
 // 获取统计数据
 const fetchDashboardData = async () => {
   try {
-    const response = await axios.get('/api/statistics/dashboard')
+    const response = await axios.get('/agent/statistics/dashboard')
     if (response.data.code === '0') {
       dashboardData.value = {
         knowledgeBaseCount: response.data.data.knowledgeBaseCount,
@@ -3126,6 +3127,9 @@ const copyToClipboard = (text) => {
         </div>
 
         <div class="header-right">
+          <!-- GitHub按钮 -->
+          <GithubBtn :size="32" />
+
           <!-- 返回首页按钮 -->
           <button class="back-button" @click="goToHome">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3184,7 +3188,7 @@ const copyToClipboard = (text) => {
       <div class="content-area">
         <!-- 这里根据activeMenu显示不同的内容 -->
         <div v-if="activeMenu === 'overview'" class="page-content">
-          <DataOverview />
+          <Dashboard />
         </div>
         <div v-else-if="activeMenu === 'intent'" class="page-content intent-page">
           <!-- 页面标题 -->
