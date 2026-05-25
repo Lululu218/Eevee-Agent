@@ -145,47 +145,88 @@ const parseMarkdownContent = (content) => {
   return parts
 }
 
-const processedContent = computed(() => {
-  if (!props.content) return []
+const processedContent = ref([])
 
-  const parts = parseThinkingBlocks(props.content)
+const parseContent = () => {
+  if (!props.content) {
+    processedContent.value = []
+    return
+  }
 
-  return parts.map(part => {
-    if (part.type === 'thinking') {
+  try {
+    const parts = parseThinkingBlocks(props.content)
+
+    processedContent.value = parts.map(part => {
+      if (part.type === 'thinking') {
+        return {
+          ...part,
+          renderedHtml: `<div class="thinking-content">${part.content}</div>`
+        }
+      }
+
+      // 解析Markdown内容，分割成不同部分
+      const contentParts = parseMarkdownContent(part.content)
+      
       return {
         ...part,
-        renderedHtml: `<div class="thinking-content">${part.content}</div>`
-      }
-    }
-
-    // 解析Markdown内容，分割成不同部分
-    const contentParts = parseMarkdownContent(part.content)
-    
-    return {
-      ...part,
-      contentParts: contentParts.map((contentPart, index) => {
-        const rawHtml = marked.parse(contentPart.content)
-        const cleanHtml = DOMPurify.sanitize(rawHtml, {
-          ALLOWED_TAGS: [
-            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'strike', 'del',
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'ul', 'ol', 'li',
-            'blockquote', 'code', 'pre',
-            'a', 'img',
-            'table', 'thead', 'tbody', 'tr', 'th', 'td',
-            'hr', 'div', 'span'
-          ],
-          ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'data-language', 'data-code', 'data-line']
+        contentParts: contentParts.map((contentPart, index) => {
+          let rawHtml = ''
+          try {
+            rawHtml = marked.parse(contentPart.content)
+          } catch (e) {
+            // Markdown解析失败，回退到转义后的纯文本
+            rawHtml = `<p>${escapeHtml(contentPart.content)}</p>`
+          }
+          
+          const cleanHtml = DOMPurify.sanitize(rawHtml, {
+            ALLOWED_TAGS: [
+              'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'strike', 'del',
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'ul', 'ol', 'li',
+              'blockquote', 'code', 'pre',
+              'a', 'img',
+              'table', 'thead', 'tbody', 'tr', 'th', 'td',
+              'hr', 'div', 'span'
+            ],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'data-language', 'data-code', 'data-line']
+          })
+          
+          return {
+            ...contentPart,
+            renderedHtml: cleanHtml
+          }
         })
-        
-        return {
-          ...contentPart,
-          renderedHtml: cleanHtml
-        }
-      })
-    }
+      }
+    })
+  } catch (e) {
+    console.error('Markdown parsing error:', e)
+    // 解析失败时显示原始内容（转义后）
+    processedContent.value = [{
+      type: 'markdown',
+      id: 'fallback',
+      contentParts: [{
+        type: 'text',
+        content: props.content,
+        renderedHtml: `<p>${escapeHtml(props.content)}</p>`
+      }]
+    }]
+  }
+}
+
+// HTML转义函数
+const escapeHtml = (text) => {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+// 监听content变化，每次都重新解析
+watch(() => props.content, () => {
+  parseContent()
+  nextTick(() => {
+    highlightCode()
   })
-})
+}, { immediate: true, deep: true })
 
 const toggleThinking = (id) => {
   thinkingCollapsed.value[id] = !thinkingCollapsed.value[id]
@@ -262,13 +303,8 @@ const highlightCode = () => {
   })
 }
 
-watch(() => props.content, () => {
-  nextTick(() => {
-    highlightCode()
-  })
-}, { immediate: true })
-
 onMounted(() => {
+  parseContent()
   highlightCode()
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
