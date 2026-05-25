@@ -191,7 +191,7 @@ lc4j提供了5个核心组件：
 
 
 
-![img](../../../../images/advanced-rag-fb84283d02470b835ff2f4913f08fdbf.png)
+![img](./../../../images/advanced-rag-fb84283d02470b835ff2f4913f08fdbf.png)
 
 
 
@@ -215,7 +215,7 @@ lc4j提供了5个核心组件：
 
 **核心契约：**由原始 Query衍生出一个或多个 Query的集合。官方提供了三种实现类
 
-![image-20260411111707834](../../../../images/image-20260411111707834.png)
+![image-20260411111707834](./../../../images/image-20260411111707834.png)
 
 #### DefaultQueryTransformer（默认查询转换器）
 
@@ -255,7 +255,7 @@ lc4j提供了5个核心组件：
 
 **核心契约：**负责将用户查询动态分配到一个或多个最合适的**ContentRetriever**（内容检索器）,官方提供了两个实现类
 
-![image-20260411141357002](../../../../images/image-20260411141357002.png)
+![image-20260411141357002](./../../../images/image-20260411141357002.png)
 
 
 
@@ -295,7 +295,7 @@ lc4j提供了5个核心组件：
 
 **核心契约：**路由选中它之后，它就去数据源里找和用户问题最相关的文本片段。
 
-![image-20260411141427857](../../../../images/image-20260411141427857.png)
+![image-20260411141427857](./../../../images/image-20260411141427857.png)
 
 
 
@@ -355,7 +355,7 @@ lc4j提供了5个核心组件：
 
 **核心契约：**负责将多个`ContentRetriever`（如向量检索、联网检索）返回的多份独立结果列表，进行合并、去重、重排，最终输出一份统一、高相关性的内容列表，作为 LLM 生成答案的上下文。
 
-![image-20260411141450914](../../../../images/image-20260411141450914.png)
+![image-20260411141450914](./../../../images/image-20260411141450914.png)
 
 
 
@@ -546,7 +546,7 @@ lc4j提供了5个核心组件：
 
 
 
-![image-20260412163822056](../../../../images/image-20260412163822056-1775983324347-1.png)
+![image-20260412163822056](./../../../images/image-20260412163822056-1775983324347-1.png)
 
 
 
@@ -605,7 +605,7 @@ lc4j提供了5个核心组件：
 
 ### 2.ChatMemoryStore持久化
 
-![image-20260412165622058](../../../../images/image-20260412165622058.png)
+![image-20260412165622058](./../../../images/image-20260412165622058.png)
 
 
 
@@ -1153,7 +1153,7 @@ public enum IntentKind {
 
 LangChain4j 的核心设计理念 ——**提供抽象接口，鼓励用户根据自身需求灵活实现**。方便适应生态多样性、解耦。
 
-![image-20260415104659794](../../../../images/image-20260415104659794.png)
+![image-20260415104659794](./../../../images/image-20260415104659794.png)
 
 
 
@@ -1175,7 +1175,7 @@ LangChain4j 的核心设计理念 ——**提供抽象接口，鼓励用户根�
 
 2.22.6版本，百炼官方提供了如下实体
 
-![image-20260415110309144](../../../../images/image-20260415110309144.png)
+![image-20260415110309144](./../../../images/image-20260415110309144.png)
 
 #### TextRerank：
 
@@ -1377,7 +1377,7 @@ retrieve(buildSubQuestionContext)
 
 ### 实现类：
 
-![image-20260424092055172](../../../../images/image-20260424092055172.png)
+![image-20260424092055172](./../../../images/image-20260424092055172.png)
 
 1.CancellationUnsupportedStreamingHandle作用是当非指定流式输出部分反应阶段时若调用cancel方法，会抛出异常：
 
@@ -1417,91 +1417,79 @@ streamingHandle.cancel();
 
 
 
-## RAGent项目详细RAG流程
-### 1. 用户提问阶段
-- 输入 ：用户原始问题
-- 处理 ：接收用户输入，生成会话ID和任务ID
-### 2. 记忆加载阶段
-- 组件 ： ConversationMemoryService
-- 功能 ：加载历史对话记录，支持多轮对话上下文
-- 代码 ： memoryService.loadAndAppend(conversationId, userId, ChatMessage.user(question))
-### 3. 查询改写阶段
-- 组件 ： QueryRewriteService
-- 功能 ：
-  - 将自然语言问题改写为适合检索的简洁查询
-  - 支持多问句拆分
-  - 结合对话历史进行指代消解
-- 代码 ： queryRewriteService.rewriteWithSplit(question, history)
-- 输出 ： RewriteResult 包含改写后的问题和子问题列表
-### 4. 意图识别阶段
-- 组件 ： IntentResolver
-- 功能 ：
-  - 对每个子问题进行意图分类
-  - 并发处理多个子问题
-  - 过滤低分意图（分数 < 0.35）
-  - 限制最大意图数量（最多3个）
-- 代码 ： intentResolver.resolve(rewriteResult)
-- 输出 ： List<SubQuestionIntent> 包含每个子问题及其相关意图
-### 5. 歧义引导阶段
-- 组件 ： IntentGuidanceService
-- 功能 ：
-  - 检测用户问题是否存在歧义
-  - 当意图识别结果包含多个相似选项时，生成引导式问答
-  - 提示用户明确具体需求
-- 代码 ： guidanceService.detectAmbiguity(rewriteResult.rewrittenQuestion(), subIntents)
-- 输出 ： GuidanceDecision 决定是否需要引导用户
-### 6. 系统意图判断阶段
-- 组件 ： IntentResolver
-- 功能 ：
-  - 判断是否所有意图都是系统意图（SYSTEM类型）
-  - 如果是系统意图，使用自定义提示词直接回答
-  - 跳过检索流程
-- 代码 ： intentResolver.isSystemOnly(si.nodeScores())
-### 7. 检索阶段
-- 组件 ： RetrievalEngine
-- 功能 ：
-  - MCP工具调用 ：根据MCP意图调用相应工具获取动态数据
-  - 多通道检索 ：支持意图导向检索和全局检索
-  - 并发检索 ：多个检索通道并发执行
-  - 后处理 ：去重、重排序等 7.1 MCP工具调用
-- 组件 ： MCPToolExecutor
-- 功能 ：
-  - 从用户问题中提取MCP工具参数
-  - 调用相应的MCP工具（如数据库查询、API调用等）
-  - 获取动态数据作为MCP上下文 7.2 多通道检索
-- 组件 ： MultiChannelRetrievalEngine
-- 检索通道 ：
-  - 意图导向检索 ：根据意图节点定向检索特定知识库
-  - 全局检索 ：在所有知识库中进行全局搜索
-- 并发策略 ：多个检索通道并发执行，提高检索效率 7.3 后处理
-- 去重 ： DeduplicationPostProcessor 去除重复的检索结果
-- 重排序 ： RerankPostProcessor 使用Rerank模型对结果进行重新排序
-- 代码 ： retrievalEngine.retrieve(subIntents, DEFAULT_TOP_K)
-- 输出 ： RetrievalContext 包含MCP上下文、知识库上下文和分组的检索块
-### 8. 提示词组装阶段
-- 组件 ： RAGPromptService
-- 功能 ：
-  - 根据场景选择合适的提示词模板（KB_ONLY、MCP_ONLY、MIXED）
-  - 组装结构化消息序列
-  - 处理多子问题的显式编号
-  - 添加历史对话记录
-- 代码 ： promptBuilder.buildStructuredMessages(context, history, question, subQuestions)
-- 输出 ： List<ChatMessage> 完整的消息序列
-### 9. 流式输出阶段
-- 组件 ： LLMService
-- 功能 ：
-  - 调用大模型生成回答
-  - 支持流式输出
-  - 支持任务取消
-- 代码 ： llmService.streamChat(request, callback)
-- 输出 ：通过SSE向客户端流式返回回答
+# 多模型路由+熔断降级
+
+设计思路分析：
+
+1. **按「厂商」封装全系模型**：硅基 / 百炼 / 智谱 各一个独立配置类，只管理自己的 4 类模型
+2. **按「模型功能类型」做独立路由**：4 类模型（流式 / 后台 / 向量 / Rerank）各一个路由，**同类型降级**
+3. **全局优先级**：所有功能类型统一遵循 `硅基流动(主) → 百炼(备) → 智谱(兜底)`
+4. **隔离性**：流式模型故障不影响向量模型，后台模型超时不影响 Rerank 模型
+
+（后续可引入Ollama本地模型进行兜底）
+
+![](./../../../../images/AiModelRouter%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E5%9B%BE%20(1).png)
+
+也就是说核心是，让一个对象去控制选择厂商，
+
+首先做路由对象 是为了实现多模型优先级选择
+
+但是若单点发生故障就会导致系统不可用，没有服务保护机制/熔断机制
+
+做健康检查也就是Health的目的是监控provider的厂商状态，发生故障能抛出信息方便我们去监控+降级
 
 
 
+那思路理清了之后开始做具体实现
+
+## 1.模型路由
+
+分析：目前代码方案采用面向接口编程
+
+### AiModelRouter
+
+```java
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+
+/**
+ * 模型厂商路由规范
+ * 获取指定场景可用的模型厂商
+ */
+public interface AiModelRouter {
+    /**
+     * 1.流式输出路由场景
+     */
+    StreamingChatModel routerStreamingCHatModel(Boolean isThinking);
+
+    /**
+     * 2.后台基础工作路由场景
+     */
+    ChatModel routerChatModel();
+
+    /**
+     * 3.文本向量化路由场景
+     */
+    EmbeddingModel routerEmbeddingModel();
+
+    /**
+     * 手动切换路由策略
+     * （若只有一种路由策略比如优先级那就可以不用该方法）
+     */
+    void switchStrategy(RouteStrategy strategy);
+}
+```
+
+路由策略参考：
+
+1. 按优先级
+2. 轮询
+3. 故障转移：故障时转移到可用节点
+4. 负载均衡策略：根据响应时间和错误率动态选择
 
 
 
+### AiModelRouterEngine
 
-当前执行链路：
-
-reslove——》classifyIntents——》DefaultIntentClassifier.classifyTargets——》DefaultIntentClassifier.buildIntentPromptTemplate——》PromptTemplateLoader.render——》
+路由流程：按路由策略选择厂商——》返回该厂商的指定类型模型——》若出现故障/异常，尝试去切换

@@ -211,11 +211,11 @@ client.listResourceTemplates
 
 
 
+## 调用
 
+### 直接使用 McpClient
 
-## 直接使用 McpClient
-
-### ToolExecutionRequest源码分析
+ToolExecutionRequest源码分析
 
 - 它是一个**纯数据载体**（没有任何业务逻辑）
 - 你调用 `mcpClient.executeTool(...)` 时，**必须传入它**
@@ -258,7 +258,7 @@ client.listResourceTemplates
 
 
 
-## 使用AIServices注入Provider
+### 使用AIServices注入Provider
 
 代码示例：	
 
@@ -274,6 +274,10 @@ client.listResourceTemplates
         mcpClient.close();
     }
 ```
+
+
+
+### 直接使用McpToolProvider
 
 
 
@@ -316,26 +320,6 @@ lc4j自带的AIServices交互原理：
 
 
 
-
-
-## EeveeAgent接入MCP流程
-
-1. 配置MCP Tool Provider
-2. 手动构建所需工具的MCP意图节点（如天气查询）
-   1. 增加意图类型枚举
-   2. 数据库意图节点配置，kind类型增加“MCP”
-3. 修改意图识别代码、
-   1. 增加filterMcpIntents方法
-   2. 修改IntentGroup数据结构
-4. 增加MCP工具调用检索通道
-   1. 创建
-5. 配置专属MCP提示词模版+混合模版
-6. 后续进阶维护比如单独封装某个工具插件
-
-
-
-
-
 ## 实战搭建
 
 咱们以搭建一个天气查询工具为例，首先技术选型：
@@ -359,9 +343,29 @@ lc4j自带的AIServices交互原理：
 
 8.返回
 
-## 百度地图国内天气插件
+## 百度地图MCP Server
 
-### 请求参数列表
+### 可用工具
+
+|       工具名称        |              功能简述              |
+| :-------------------: | :--------------------------------: |
+|      map_geocode      |          地址转经纬度坐标          |
+|  map_reverse_geocode  |         经纬度反向解析地址         |
+|   map_search_places   |        城市 / 周边地点检索         |
+|   map_place_details   |         查询 POI 店铺详情          |
+| map_directions_matrix |        批量计算路线距离时长        |
+|    map_directions     | 单点路线规划（驾车 / 步行 / 公交） |
+|      map_weather      |       查实时与 5 天天气预报        |
+|    map_ip_location    |        IP 地址定位城市位置         |
+|   map_road_traffic    |        查询道路实时拥堵路况        |
+
+
+
+
+
+### 天气服务插件
+
+#### 请求参数列表
 
 | 参数名称    | 参数含义                                                     | 默认值 | 字段类型 | 必选 |
 | ----------- | ------------------------------------------------------------ | ------ | -------- | ---- |
@@ -378,7 +382,7 @@ lc4j自带的AIServices交互原理：
 
 
 
-### data_type数据类型解析：
+#### data_type数据类型解析：
 
 | 取值      | 全称 / 核心含义 | 具体说明                                                     |
 | --------- | --------------- | ------------------------------------------------------------ |
@@ -388,3 +392,6 @@ lc4j自带的AIServices交互原理：
 | `alert`   | **天气预警**    | 获取当前生效的官方天气预警（比如暴雨、台风、高温预警），属于事件类数据，不直接对应 “今天 / 明天” 的时间维度。 |
 | `fc_hour` | **逐小时预报**  | 获取**未来逐小时**的天气数据（通常是未来 24 小时 / 72 小时），以 “小时” 为单位，比如未来 1 小时、3 小时、6 小时的温度、降水预报。 |
 | `all`     | **所有数据**    | 一次性获取以上所有类型的数据（实况 + 按天预报 + 逐小时预报 + 指数 + 预警）。 |
+
+
+
