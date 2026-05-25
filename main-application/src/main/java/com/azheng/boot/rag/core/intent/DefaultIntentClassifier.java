@@ -189,10 +189,15 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
         String responseText = chatResponse.aiMessage().text();
 
         try {
-            // 4.清理模型输出
+            // 4.修复可能被截断的JSON（流式输出截断是常见问题）
+            String fixedJson = fixTruncatedJson(responseText);
+            if (fixedJson == null) {
+                log.warn("[INTENT] LLM 返回的 JSON 无法修复, 原始响应: {}", truncateString(responseText, 500));
+                return List.of();
+            }
 
             // 5.解析输出（设定的是Json格式的字符串）
-            JsonElement jsonElement = JsonParser.parseString(responseText);
+            JsonElement jsonElement = JsonParser.parseString(fixedJson);
 
             // 6.拦截检验模型输出格式
             JsonArray arr;
@@ -377,5 +382,208 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
                 fillFullPath(node.getChildren(), node);
             }
         }
+    }
+
+    /**
+     * 修复可能被截断的JSON字符串
+     * 处理流式输出截断导致的JSON不完整问题
+     * @param input 原始JSON字符串
+     * @return 修复后的JSON字符串，无法修复返回null
+     */
+    private String fixTruncatedJson(String input) {
+        if (input == null || input.isBlank()) {
+            return null;
+        }
+
+        // 1. 清理前后空白和markdown代码块标记
+        String cleaned = input.trim();
+        cleaned = cleaned.replaceAll("^```json\\s*", "");
+        cleaned = cleaned.replaceAll("\\s*```$", "");
+        cleaned = cleaned.replaceAll("^```\\s*", "");
+
+        // 2. 找到JSON的实际开始和结束位置
+        int startIdx = cleaned.indexOf('[');
+        int endIdx = cleaned.lastIndexOf(']');
+
+        if (startIdx == -1) {
+            // 尝试找对象格式
+            startIdx = cleaned.indexOf('{');
+            endIdx = cleaned.lastIndexOf('}');
+        }
+
+        if (startIdx == -1 || endIdx == -1 || startIdx > endIdx) {
+            log.warn("[INTENT] 无法找到有效的JSON结构, 输入: {}", truncateString(input, 200));
+            return null;
+        }
+
+        // 3. 提取JSON部分
+        String jsonPart = cleaned.substring(startIdx, endIdx + 1);
+
+        // 4. 修复未闭合的字符串（最常见的截断问题）
+        jsonPart = fixUnterminatedStrings(jsonPart);
+
+        // 5. 验证修复结果
+        if (isValidJson(jsonPart)) {
+            return jsonPart;
+        }
+
+        // 6. 尝试进一步修复
+        String furtherFixed = tryFixJson(jsonPart);
+        if (furtherFixed != null && isValidJson(furtherFixed)) {
+            return furtherFixed;
+        }
+
+        log.warn("[INTENT] JSON修复失败, 原始: {}", truncateString(input, 200));
+        return null;
+    }
+
+    /**
+     * 修复未闭合的字符串
+     * 处理 "unterminated string" 问题
+     */
+    private String fixUnterminatedStrings(String json) {
+        if (json == null) return null;
+
+        StringBuilder result = new StringBuilder(json);
+        int balance = 0;
+        boolean inString = false;
+        boolean escape = false;
+
+        for (int i = 0; i < result.length(); i++) {
+            char c = result.charAt(i);
+
+            if (escape) {
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"' && !escape) {
+                inString = !inString;
+                continue;
+            }
+
+            // 在字符串外统计花括号和方括号的平衡
+            if (!inString) {
+                if (c == '{' || c == '[') {
+                    balance++;
+                } else if (c == '}' || c == ']') {
+                    balance--;
+                }
+            }
+        }
+
+        // 如果字符串未闭合，尝试修复
+        if (inString) {
+            // 找到最后一个未闭合的引号位置
+            int lastQuote = result.lastIndexOf("\"");
+            if (lastQuote != -1) {
+                // 从最后一个引号之后查找可能的闭合位置
+                String remaining = result.substring(lastQuote + 1);
+                // 查找下一个引号或结构结束符
+                int nextQuote = remaining.indexOf("\"");
+                int nextBracket = remaining.indexOf(']');
+                int nextBrace = remaining.indexOf('}');
+
+                // 如果没有找到合适的闭合位置，在末尾添加引号
+                if (nextQuote == -1 || (nextBracket != -1 && nextBracket < nextQuote) || 
+                    (nextBrace != -1 && nextBrace < nextQuote)) {
+                    // 在适当位置添加闭合引号
+                    int closePos = result.length();
+                    if (nextBracket != -1) closePos = Math.min(closePos, lastQuote + 1 + nextBracket);
+                    if (nextBrace != -1) closePos = Math.min(closePos, lastQuote + 1 + nextBrace);
+                    result.insert(closePos, "\"");
+                    log.debug("[INTENT] 修复未闭合的字符串，在位置 {} 添加了引号", closePos);
+                }
+            }
+        }
+
+        // 修复不平衡的括号
+        while (balance > 0) {
+            // 检查最后一个未闭合的开括号类型
+            int lastOpenBrace = result.lastIndexOf("{");
+            int lastOpenBracket = result.lastIndexOf("[");
+            
+            if (lastOpenBrace > lastOpenBracket) {
+                result.append("}");
+            } else {
+                result.append("]");
+            }
+            balance--;
+            log.debug("[INTENT] 添加闭合括号");
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * 尝试多种方式修复JSON
+     */
+    private String tryFixJson(String json) {
+        // 尝试移除末尾不完整的内容
+        String[] patterns = {
+            "(,\\s*[^\\]}\\s]*)$",  // 末尾不完整的元素
+            "(\"[^\"]*)$",           // 末尾不完整的字符串
+            "(,\\s*)$"               // 末尾多余的逗号
+        };
+
+        for (String pattern : patterns) {
+            String fixed = json.replaceAll(pattern, "");
+            if (isValidJson(fixed)) {
+                log.debug("[INTENT] 通过模式 {} 修复了JSON", pattern);
+                return fixed;
+            }
+        }
+
+        // 尝试添加缺失的闭合括号
+        if (!json.endsWith("]") && json.startsWith("[")) {
+            String fixed = json + "]";
+            if (isValidJson(fixed)) {
+                log.debug("[INTENT] 添加了缺失的 ]");
+                return fixed;
+            }
+        }
+
+        if (!json.endsWith("}") && json.startsWith("{")) {
+            String fixed = json + "}";
+            if (isValidJson(fixed)) {
+                log.debug("[INTENT] 添加了缺失的 }");
+                return fixed;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 验证JSON是否有效
+     */
+    private boolean isValidJson(String json) {
+        if (json == null || json.isBlank()) {
+            return false;
+        }
+        try {
+            JsonParser.parseString(json);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 截断字符串用于日志输出
+     */
+    private String truncateString(String str, int maxLength) {
+        if (str == null) {
+            return null;
+        }
+        if (str.length() <= maxLength) {
+            return str;
+        }
+        return str.substring(0, maxLength) + "...(truncated)";
     }
 }
