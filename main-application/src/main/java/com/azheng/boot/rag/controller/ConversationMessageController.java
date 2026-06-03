@@ -15,6 +15,7 @@ public class ConversationMessageController {
     @Resource
     private ConversationMessageService conversationMessageService;
 
+    // 删除会话消息
     @PutMapping("remove")
     public Result<Void> delete(@RequestBody DeleteMessageRequest request) {
         try {

@@ -42,6 +42,7 @@ public class IntentResolver {
     public List<SubQuestionIntent> resolve(RewriteResult rewriteResult) {
         List<String> subQuestions = new ArrayList<>();
         // 改动：子问题+精简问题 组合使用
+        // 如果包含子问题
         if(CollUtil.isNotEmpty(rewriteResult.subQuestions())){
             subQuestions.addAll(rewriteResult.subQuestions());
         }else {
@@ -214,7 +215,10 @@ public class IntentResolver {
      * 2.保留每个子问题的最高分意图
      */
     private List<IntentCandidate> selectTopIntentPerSubQuestion(List<IntentCandidate> allCandidates, int subQuestionCount) {
+        // 最终结果，存储每个子问题的最高分意图
         List<IntentCandidate> topIntents = new ArrayList<>();
+        // 布尔标记数组，长度 = 子问题总数
+        // 初始值全是 false  标记这个子问题是否已经选到了最高分（选过就设为true，不再重复选）
         boolean[] selected = new boolean[subQuestionCount];
         //allCandidates长这样：[0号子问题(0.9分), 1号子问题(0.8分), 0号子问题(0.7分), 1号子问题(0.6分)]
         for (IntentCandidate candidate : allCandidates) {
@@ -278,7 +282,7 @@ public class IntentResolver {
             allSelected.addAll(additionalIntents);
         }
 
-        // 按子问题索引分组
+        // 按子问题索引 分组
         Map<Integer, List<NodeScore>> groupedByIndex = new ConcurrentHashMap<>();
         for (IntentCandidate candidate : allSelected) {
             groupedByIndex.computeIfAbsent(candidate.subQuestionIndex(), k -> new ArrayList<>())

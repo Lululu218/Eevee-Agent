@@ -38,6 +38,7 @@ public class QueryTransformerService {
                     .builder()
                     .chatModel(retrievalToolModel)
                     .build();
+            // 返回一个压缩后的精准查询
             queries = compressingQueryTransformer.transform(userQuery);
             Query query = queries.stream().toList().get(0);
 

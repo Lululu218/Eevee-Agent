@@ -18,11 +18,13 @@ public class ConversationController {
     @Resource
     private ConversationService conversationService;
 
+    // 获取会话列表
     @GetMapping("/list")
     public Result<List<ConversationVO>> query(@RequestParam String userId){
         return Results.success(conversationService.queryConversations(userId));
     }
 
+    // 修改会话标题
     @PostMapping("/mkdir")
     public Result<Void> updateTitle(@RequestBody MkdirTitleRequest request){
         try {
@@ -33,6 +35,7 @@ public class ConversationController {
         }
     }
 
+    // 删除会话
     @PutMapping("remove")
     public Result<Void> delete(@RequestParam String conversationId){
         try {
@@ -43,6 +46,7 @@ public class ConversationController {
         }
     }
 
+    // 获取会话消息列表
     @GetMapping("/{conversationId}")
     public Result<List<ConversationMessageVO>> openConversationById(@PathVariable String conversationId){
         return Results.success(conversationService.queryConversationMessage(conversationId));

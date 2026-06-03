@@ -5,6 +5,7 @@ target/
 
 ### IntelliJ IDEA ###
 .idea/
+.qoder/
 *.iml
 *.iws
 *.ipr

@@ -34,17 +34,16 @@ spring:
       max-request-size: 100MB
 
   #---MySQL数据配置---(暂定本地数据库、可迁移至docker)
-  datasource:
-    url: jdbc:mysql://192.168.191.128:3306/eeveeagent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+  datasource: ##192.168.191.128
+    url: jdbc:mysql://localhost:3306/eeveeagent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   data:
     redis:
-      host: 192.168.191.128
+      host: 192.168.225.134
       port: 6379
-      password: 123456
 
 #---Mybatis-Plus配置---
 mybatis-plus:
@@ -59,7 +58,7 @@ langchain4j:
   #---百炼平台-通义千问核心配置---
   community:
     dashscope:
-      api-key: ${BAILIAN_API_KEY}
+      api-key: ${ALIBABA_API_KEY}
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       dimensions: 768
       rerank-model-name: qwen3-rerank
@@ -68,7 +67,7 @@ langchain4j:
 
 #---Milvus 向量数据库配置---
 milvus:
-  uri: http://192.168.191.128:19530
+  uri: http://192.168.225.134:19530
   dbname: eevee_agent
   connectTimeout: 5000
   keepAliveTime: 30000
@@ -77,7 +76,7 @@ milvus:
 
 #---RustFS 对象存储配置---
 rustfs:
-  url: http://192.168.191.128:9000
+  url: http://192.168.225.134:9002
   # --账号密码
   access-key-id: rustfsadmin
   secret-access-key: rustfsadmin
@@ -101,9 +100,9 @@ ai:
 
   #1. 硅基流动（聚合平台：DeepSeek / Kimi / BGE）主模型
   silicon-flow:
-      order: 1
+      order: 2
       enabled: true
-      api-key: ${SILICONFLOW_API_KEY}
+      api-key: sk-pcewordzqnoekazcfsqzmuyjehmxzazccsfttdvspjnmdcje
       base-url: https://api.siliconflow.cn/v1
       stream-model: deepseek-ai/DeepSeek-V4-Flash
       background-model: deepseek-ai/DeepSeek-V3.2
@@ -112,9 +111,9 @@ ai:
 
   #2. 阿里百炼（备用）
   bai-lian:
-    order: 2
+    order: 1
     enabled: true
-    api-key: ${BAILIAN_API_KEY}
+    api-key: ${ALIBABA_API_KEY}
     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     stream-model: qwen-flash
     background-model: qwen-turbo

@@ -52,6 +52,7 @@ public class RecallService {
 
         List<CompletableFuture<List<MilvusRetrievalResult>>> futures = nodeScores.stream()
                 .map(
+                        // 异步执行：每个意图节点 = 一个独立检索任务
                         nodeScore -> {
                             CompletableFuture<List<MilvusRetrievalResult>> future = CompletableFuture.supplyAsync(
                                     () -> {

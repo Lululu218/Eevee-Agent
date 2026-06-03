@@ -33,7 +33,8 @@ public class AuthServiceImpl implements AuthService {
         // 根据用户名获取用户信息
         UserDO user = getUserByName(username);
         String encodedPassword = user.getPassword();
-        boolean isMatch = BCrypt.checkpw(password, encodedPassword);
+        //boolean isMatch = BCrypt.checkpw(password, encodedPassword);
+        boolean isMatch = password.equals(encodedPassword);
 
         // 校验
         if(user == null || !isMatch) {

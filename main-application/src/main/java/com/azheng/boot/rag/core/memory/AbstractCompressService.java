@@ -33,6 +33,7 @@ public class AbstractCompressService {
 
     private final HistoryAbstractStore historyAbstractStore;
 
+    // 最大对话轮次：6轮（超过就触发压缩）
     public static final Integer MAX_ROUNDS = 6;
 
     /**

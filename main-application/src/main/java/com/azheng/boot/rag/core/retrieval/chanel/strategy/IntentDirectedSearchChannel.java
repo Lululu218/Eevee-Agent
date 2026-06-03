@@ -42,16 +42,19 @@ public class IntentDirectedSearchChannel implements SearchChannel {
         this.properties = properties;
     }
 
+    // 名称
     @Override
     public String getName() {
         return "IntentDirectedSearchChannel";
     }
 
+    // 优先级
     @Override
     public int getPriority() {
         return 1;
     }
 
+    // 是否启用
     @Override
     public boolean isEnabled(SearchContext context) {
         if(!properties.getChannels().getIntentDirected().isEnabled()){
@@ -89,6 +92,7 @@ public class IntentDirectedSearchChannel implements SearchChannel {
             log.info("执行意图定向检索，识别出 {} 个 KB 意图", kbIntents.size());
 
             // 并行检索所有意图对应的知识库
+            // 获取检索数量乘数topKMultiplier
             int topKMultiplier = properties.getChannels().getIntentDirected().getTopKMultiplier();
             SubQuestionIntent subQuestionIntent = new SubQuestionIntent(context.getMainQuestion(), kbIntents);
             List<List<MilvusRetrievalResult>> lists = recallService.recallMilvusContentWithKB(subQuestionIntent,topKMultiplier );
@@ -101,6 +105,7 @@ public class IntentDirectedSearchChannel implements SearchChannel {
 
 
             // 计算置信度（基于意图分数）
+            // 获取最大意图分数
             double confidence = kbIntents.stream()
                     .mapToDouble(NodeScore::getScore)
                     .max()

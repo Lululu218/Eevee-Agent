@@ -87,6 +87,7 @@ public class ConversationServiceImpl implements ConversationService {
         return conversationVOList;
     }
 
+    // 修改会话标题
     @Override
     public void mkdirTitle(String newTitle, String conversationId) {
         String title = StrUtil.trimToNull(newTitle);
@@ -101,6 +102,7 @@ public class ConversationServiceImpl implements ConversationService {
         );
     }
 
+    // 删除指定会话
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteByConversationId(String conversationId) {
@@ -129,11 +131,13 @@ public class ConversationServiceImpl implements ConversationService {
         }
     }
 
+    // 获取会话消息列表（引用）
     @Override
     public List<ConversationMessageVO> queryConversationMessage(String conversationId) {
         return conversationMessageService.queryConversationMessage(conversationId);
     }
 
+    // 生成会话标题
     @Override
     public void generateTitle(String conversationId, String userQuestion) {
         //首次对话完成 → 判断消息数 = 2 → 异步调用轻量 LLM → 生成 15 字内标题 → 更新会话表 → 永久不再自动变

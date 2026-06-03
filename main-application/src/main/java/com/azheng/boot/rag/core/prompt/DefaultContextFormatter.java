@@ -46,7 +46,7 @@ public class DefaultContextFormatter implements ContextFormatter {
         String body = chunks.stream()
                 .limit(topK)
                 .map(ReRankContext::getText)
-                .collect(Collectors.joining("\n"));
+                .collect(Collectors.joining("\n")   );
         StringBuilder block = new StringBuilder();
         if (StrUtil.isNotBlank(snippet)) {
             block.append("#### 回答规则\n").append(snippet).append("\n\n");

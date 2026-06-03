@@ -27,7 +27,9 @@ import static com.azheng.boot.rag.constant.RAGConstant.*;
 @RequiredArgsConstructor
 public class RetrievalEngine {
 
+    // 格式化工具：把检索结果转成大模型可读的文本
     private final ContextFormatter contextFormatter;
+    // 多通道检索引擎
     private final MultiChannelRetrievalEngine multiChannelRetrievalEngine;
 
     @Qualifier("ragContextThreadPoolExecutor")
@@ -48,7 +50,7 @@ public class RetrievalEngine {
                     .build();
         }
 
-        // 1，根据子问题意图列表，计算每个子问题的实际 TopK 数
+        // 1，根据子问题意图列表，计算每个子问题的实际 TopK数
         // 2，为每个子问题执行多通道检索（知识库）
         int finalTopK = topK > 0 ? topK : DEFAULT_TOP_K;
 

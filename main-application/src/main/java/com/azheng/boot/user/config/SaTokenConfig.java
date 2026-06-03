@@ -44,6 +44,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                     }
                  }
                  // 执行登录检查
+          //TODO
                  StpUtil.checkLogin();
               }))
               // 拦截所有路径

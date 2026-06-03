@@ -58,10 +58,11 @@ import static com.azheng.boot.rag.enums.IntentLevel.DOMAIN;
 @RequiredArgsConstructor
 public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentNodeDO> implements IntentTreeService {
 
+    // Redis缓存管理器（清缓存用）
     private final IntentTreeCacheManager intentTreeCacheManager;
-
+    // 知识库Mapper（关联知识库）
     private final KnowledgeBaseMapper knowledgeBaseMapper;
-
+    // JSON工具（序列化示例数据）
     private static final Gson GSON = new Gson();
 
     /**

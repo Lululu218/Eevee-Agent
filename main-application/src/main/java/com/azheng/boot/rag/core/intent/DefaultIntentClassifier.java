@@ -112,10 +112,17 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
             return new IntentTreeData(List.of(), List.of(), Map.of());
         }
 
+        // 1. 把树形结构的根节点，扁平化展开为 所有节点的线性列表
         List<IntentNode> allNodes = flatten(roots);
+
+        // 2. 过滤出【叶子节点】（没有子节点的最终意图节点）
         List<IntentNode> leafNodes = allNodes.stream()
+                // 筛选叶子节点
                 .filter(IntentNode::isLeaf)
                 .collect(Collectors.toList());
+
+        // 3. 构建【节点ID -> 节点对象】的Map，用于O(1)极速查找
+        // 把所有节点转换成 Map<节点ID, 节点对象>，用 ID 可以瞬间找到节点
         Map<String, IntentNode> id2Node = allNodes.stream()
                 .collect(Collectors.toMap(IntentNode::getId, n -> n));
 
@@ -146,6 +153,8 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
     ) {
     }
 
+
+    // 多层嵌套的树形结构，展平成一维列表
     private List<IntentNode> flatten(List<IntentNode> roots) {
         List<IntentNode> result = new ArrayList<>();
         Deque<IntentNode> stack = new ArrayDeque<>(roots);
@@ -186,6 +195,7 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
 
         // 3.调用模型，获取模型输出的提示词模版指定的输出格式内容
         ChatResponse chatResponse = chatModel.chat(chatRequest);
+        // responseText：AI 返回的JSON 字符串（预期格式：[{"id":"1001","score":0.95}, ...]）
         String responseText = chatResponse.aiMessage().text();
 
         try {
@@ -307,41 +317,57 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
                 .toList();
     }
 
+    /**
+     * 从数据库加载意图树，并组装成【嵌套树形结构】返回根节点
+     * 数据库存的是扁平数据（每行一个节点，只记录父ID），方法作用是拼成树
+     * @return
+     */
     private List<IntentNode> loadIntentTreeFromDB() {
         // 1. 查出所有未删除节点（扁平结构）
         List<IntentNodeDO> intentNodeDOList = intentNodeMapper.selectList(
                 Wrappers.lambdaQuery(IntentNodeDO.class)
-                        .eq(IntentNodeDO::getDelFlag, 0)
+                        .eq(IntentNodeDO::getDelFlag, 0) // 逻辑删除：0=未删除，1=已删除
         );
 
+        // 空数据直接返回空列表
         if (intentNodeDOList.isEmpty()) {
             return List.of();
         }
 
-        // 2. DO -> IntentNode（第一遍：先把所有节点建出来，放到 map 里）
+        // 2. DO -> IntentNode,构建【ID->节点】映射
+        // （第一遍：先把所有节点建出来，放到 map 里,方便后续快速找父节点）
         Map<String, IntentNode> id2Node = new HashMap<>();
         for (IntentNodeDO each : intentNodeDOList) {
+
+            // 工具类：数据库对象(DO) 转 业务对象(Node)
             IntentNode node = BeanUtil.toBean(each, IntentNode.class);
-            // 数据库中的 code 映射到 IntentNode 的 id/parentId
+
+            // 数据库字段映射 → intentCode=节点ID，parentCode=父节点ID
             node.setId(each.getIntentCode());
             node.setParentId(each.getParentCode());
-            // 确保 children 不为 null（避免后面 add NPE）
+
+            // 初始化子节点集合,确保 children 不为 null（避免后面 add NPE空指针）
             if (node.getChildren() == null) {
                 node.setChildren(new ArrayList<>());
             }
+
+            // 存入Map：key=节点ID，value=节点对象
             id2Node.put(node.getId(), node);
         }
 
         // 3. 第二遍：根据 parentId 组装 parent -> children
-        List<IntentNode> roots = new ArrayList<>();
+        List<IntentNode> roots = new ArrayList<>(); // 最终返回的根节点列表
         for (IntentNode node : id2Node.values()) {
             String parentId = node.getParentId();
+
+            // 情况1：没有父ID → 是根节点（树的最顶层）
             if (parentId == null || parentId.isBlank()) {
                 // 没有 parentId，当作根节点
                 roots.add(node);
                 continue;
             }
 
+            // 情况2：有父ID → 从Map中快速查找父节点
             IntentNode parent = id2Node.get(parentId);
             if (parent == null) {
                 // 找不到父节点，兜底也当作根节点，避免节点丢失
@@ -349,16 +375,18 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
                 continue;
             }
 
-            // 追加到父节点的 children
             if (parent.getChildren() == null) {
                 parent.setChildren(new ArrayList<>());
             }
+            // 核心：把当前节点，添加到父节点的子节点列表中 → 形成父子关系
             parent.getChildren().add(node);
         }
 
         // 4. 填充 fullPath（跟你原来的 fillFullPath 一样的逻辑）
+        // 例：根节点/一级子节点/二级子节点
         fillFullPath(roots, null);
 
+        // 返回组装好的 意图树根节点（嵌套树形结构）
         return roots;
     }
 

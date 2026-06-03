@@ -37,6 +37,11 @@ public class RAGPromptService {
         return StrUtil.isBlank(template) ? "" : PromptTemplateUtils.cleanupPrompt(template);
     }
 
+    /**
+     * 根据上下文，生成提示词构建计划
+     * @param context 提示词上下文
+     * @return PromptBuildPlan 提示词计划
+     */
     private PromptBuildPlan plan(PromptContext context) {
         if (context.hasKb()) {
             return planKbOnly(context);
@@ -44,6 +49,11 @@ public class RAGPromptService {
         throw new IllegalStateException("PromptContext requires MCP or KB context.");
     }
 
+    /**
+     * 纯知识库场景规划
+     * @param context 提示词上下文
+     * @return PromptBuildPlan 提示词计划
+     */
     private PromptBuildPlan planKbOnly(PromptContext context) {
         PromptPlan plan = planPrompt(context.getKbIntents(), context.getIntentChunks());
         return PromptBuildPlan.builder()

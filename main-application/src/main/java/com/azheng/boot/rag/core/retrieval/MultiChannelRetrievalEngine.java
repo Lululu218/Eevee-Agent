@@ -50,8 +50,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MultiChannelRetrievalEngine {
 
+    // 1. 所有检索通道（Spring自动注入所有实现SearchChannel接口的类）
     private final List<SearchChannel> searchChannels;
+    // 2. 所有后置处理器（去重、重排、截断等）
     private final List<SearchResultPostProcessor> postProcessors;
+    // 3. 检索专用线程池（并行执行，不阻塞主线程）
     @Qualifier("ragRetrievalThreadPoolExecutor")
     private final Executor ragRetrievalExecutor;
 

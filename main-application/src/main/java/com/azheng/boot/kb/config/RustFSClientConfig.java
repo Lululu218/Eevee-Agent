@@ -20,7 +20,7 @@ public class RustFSClientConfig {
     public S3Client RustFSClient() {
         return S3Client.builder()
                 // 配置SDK应与其通信的端点：配置RustFS服务的url
-                .endpointOverride(URI.create("http://192.168.191.128:9001"))
+                .endpointOverride(URI.create("http://192.168.225.134:9002"))
                 // 配置区域 中国北部-1
                 .region(Region.CN_NORTH_1)
                 // 配置用于与AWS认证的凭证,就是配置账号密码，可以是动态的token，也可以是我们设置的静态账号密码
